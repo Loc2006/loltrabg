@@ -7,7 +7,6 @@ import confetti from 'canvas-confetti';
 import { Header } from './components/common/Header';
 import { LoginModal } from './components/common/LoginModal';
 import { UserProfileModal } from './components/customer/UserProfileModal';
-import { LuckyWheelModal } from './components/customer/LuckyWheelModal';
 import { InSeatDeliveryModal } from './components/customer/InSeatDeliveryModal';
 import { CinemaBotModal } from './components/customer/CinemaBotModal';
 import { HomePage } from './pages/customer/HomePage';
@@ -45,7 +44,6 @@ function MainApp() {
   const [selectedMovieIdFilter, setSelectedMovieIdFilter] = useState('all');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isLuckyWheelOpen, setIsLuckyWheelOpen] = useState(false);
   const [isInSeatDeliveryOpen, setIsInSeatDeliveryOpen] = useState(false);
   const [momoIssuedTickets, setMomoIssuedTickets] = useState(null);
   const [momoReturnBanner, setMomoReturnBanner] = useState(null);
@@ -132,7 +130,6 @@ function MainApp() {
           onOpenProfile={() => setIsProfileModalOpen(true)}
           onNavigate={handleNavigate}
           currentView={currentView}
-          onOpenLuckyWheel={() => setIsLuckyWheelOpen(true)}
           onOpenInSeatDelivery={() => setIsInSeatDeliveryOpen(true)}
         />
 
@@ -164,7 +161,6 @@ function MainApp() {
             onSelectSchedule={handleSelectSchedule}
             onNavigate={handleNavigate}
             onOpenInSeatDelivery={() => setIsInSeatDeliveryOpen(true)}
-            onOpenLuckyWheel={() => setIsLuckyWheelOpen(true)}
           />
         )}
 
@@ -263,14 +259,6 @@ function MainApp() {
         }}
       />
 
-      {/* Lucky Wheel Modal */}
-      <LuckyWheelModal
-        isOpen={isLuckyWheelOpen}
-        onClose={() => setIsLuckyWheelOpen(false)}
-        onVoucherClaimed={() => {}}
-        onNavigateBooking={() => handleNavigate('movies')}
-      />
-
       {/* In-Seat Delivery Modal */}
       <InSeatDeliveryModal
         isOpen={isInSeatDeliveryOpen}
@@ -282,7 +270,6 @@ function MainApp() {
         onSelectMovie={handleSelectMovie}
         onSelectSchedule={handleSelectSchedule}
         onNavigate={handleNavigate}
-        onOpenLuckyWheel={() => setIsLuckyWheelOpen(true)}
         onOpenInSeatDelivery={() => setIsInSeatDeliveryOpen(true)}
       />
     </div>

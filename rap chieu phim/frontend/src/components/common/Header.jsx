@@ -7,7 +7,6 @@ import {
   Bell,
   User,
   LogOut,
-  Gift,
   CheckCircle,
   AlertTriangle,
   Wrench,
@@ -25,7 +24,6 @@ export function Header({
   onOpenAuth,
   onNavigate,
   currentView,
-  onOpenLuckyWheel,
   onOpenInSeatDelivery,
   onOpenProfile,
 }) {
@@ -115,14 +113,6 @@ export function Header({
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Quick Action Badges */}
             <div className="hidden xl:flex items-center gap-2">
-              <button
-                onClick={onOpenLuckyWheel}
-                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-ruby-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 border border-amber-500/40 text-xs font-black transition-all flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
-                title="Vòng quay may mắn nhận voucher"
-              >
-                <Gift className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="whitespace-nowrap">Vòng Quay Voucher</span>
-              </button>
               <button
                 onClick={onOpenInSeatDelivery}
                 className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-black transition-all flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
@@ -240,16 +230,7 @@ export function Header({
       {/* Mobile Drawer Navigation */}
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-cinema-950/95 border-b border-cinema-700/80 px-4 py-4 space-y-3 animate-fade-in backdrop-blur-xl">
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                onOpenLuckyWheel();
-              }}
-              className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5"
-            >
-              <Gift className="w-4 h-4 text-amber-400" /> Vòng Quay
-            </button>
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
@@ -257,7 +238,7 @@ export function Header({
               }}
               className="p-2.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5"
             >
-              <Utensils className="w-4 h-4 text-emerald-400" /> Gọi Bắp
+              <Utensils className="w-4 h-4 text-emerald-400" /> Gọi Bắp Nước
             </button>
             <button
               onClick={toggleTheme}

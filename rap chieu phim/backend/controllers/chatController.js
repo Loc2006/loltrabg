@@ -53,7 +53,7 @@ Dữ liệu phim đang chiếu tại rạp:
 ${moviesContext || 'Dune: Hành Tinh Cát 2, Oppenheimer, Mai, Godzilla x Kong'}
 Suất chiếu gần nhất:
 ${schedulesContext || 'Các suất chiếu mở từ 09:00 đến 23:00 hàng ngày'}
-Voucher: Giảm 20.000đ khi quay Vòng Quay May Mắn.
+Ưu đãi: Giảm 15% cho thành viên và học sinh sinh viên vào Thứ 4 Vui Vẻ. Áp dụng mã voucher giảm giá trực tiếp khi thanh toán.
 Ghế đẹp: Hàng D, E, F (ghế 5, 6, 7) là vị trí Sweet Spot âm thanh Dolby Atmos tốt nhất.
 Thông tin liên hệ CSKH: Hotline 0375358344, Email letandung231106@gmail.com.
 Yêu cầu: Trả lời ngắn gọn (dưới 120 từ), nhiệt tình, hoàn toàn bằng tiếng Việt có emoji rạp phim sinh động.`;
@@ -135,8 +135,8 @@ function generateCinemaResponse(q, movies = [], schedules = []) {
   const isGreeting = /\b(hello|hi|hey|alo)\b/i.test(q) || q.includes('chào');
   if (isGreeting) {
     return {
-      text: 'Xin chào! Tôi là **CinemaBot** - Trợ lý đặt vé và chăm sóc khách hàng của Rạp Night Movie 🍿🎬.\n\nTôi có thể giúp bạn:\n- 🎬 Tra cứu danh sách **phim hot đang chiếu**\n- 📅 Xem **lịch chiếu & giá vé** hôm nay\n- 💡 Hướng dẫn chọn **vị trí ghế vàng Sweet Spot**\n- 🎡 Tham gia **Vòng quay may mắn** nhận voucher giảm 20.000đ\n\nBạn cần hỗ trợ phim gì ạ?',
-      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🎡 Quay voucher', '🍿 Menu bắp nước']
+      text: 'Xin chào! Tôi là **CinemaBot** - Trợ lý đặt vé và chăm sóc khách hàng của Rạp Night Movie 🍿🎬.\n\nTôi có thể giúp bạn:\n- 🎬 Tra cứu danh sách **phim hot đang chiếu**\n- 📅 Xem **lịch chiếu & giá vé** hôm nay\n- 💡 Hướng dẫn chọn **vị trí ghế vàng Sweet Spot**\n- 🍿 Gọi **bắp nước giao tận phòng chiếu**\n\nBạn cần hỗ trợ phim gì ạ?',
+      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🍿 Menu bắp nước', '💡 Ghế Sweet Spot']
     };
   }
 
@@ -170,17 +170,17 @@ function generateCinemaResponse(q, movies = [], schedules = []) {
       text: `🔥 Danh sách **phim hot đang chiếu** tại Night Movie:\n\n${listText}\n\nBạn muốn xem trailer hay đặt vé phim nào để tôi hướng dẫn nhé!`,
       actionType: 'movies',
       actionLabel: '🎬 Khám Phá Toàn Bộ Phim',
-      quickReplies: ['🎫 Suất chiếu tối nay', '🎡 Quay voucher', '💡 Ghế Sweet Spot']
+      quickReplies: ['🎫 Suất chiếu tối nay', '🍿 Menu bắp nước', '💡 Ghế Sweet Spot']
     };
   }
 
   // 4. Voucher & Khuyến mãi
-  if (q.includes('voucher') || q.includes('quay') || q.includes('khuyến mãi') || q.includes('giảm') || q.includes('ưu đãi')) {
+  if (q.includes('voucher') || q.includes('khuyến mãi') || q.includes('giảm') || q.includes('ưu đãi') || q.includes('mã giảm')) {
     return {
-      text: '🎁 **Vòng Quay May Mắn Night Movie** đang diễn ra!\nBạn có thể trúng:\n- Voucher giảm **20.000đ** cho vé xem phim\n- Giảm **15%** tổng hóa đơn\n- Combo bắp rang ngọt miễn phí!\n\nHãy bấm nút bên dưới để quay ngay nhé!',
-      actionType: 'lucky_wheel',
-      actionLabel: '🎡 Mở Vòng Quay May Mắn',
-      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Đặt vé phim']
+      text: '🎁 **Chính sách ưu đãi tại Night Movie**:\n- Giảm **15%** cho thành viên và học sinh sinh viên vào Thứ 4 Vui Vẻ\n- Giảm giá vé khi nhập mã voucher ưu đãi tại bước thanh toán\n- Tích lũy điểm thưởng thành viên đổi vé và bắp nước miễn phí!',
+      actionType: 'schedules',
+      actionLabel: '📅 Xem Lịch Chiếu & Đặt Vé',
+      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🍿 Menu bắp nước']
     };
   }
 
