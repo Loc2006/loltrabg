@@ -15,6 +15,7 @@ const dbConfig = {
   queueLimit: 0,
   dateStrings: true,
   multipleStatements: true,
+  timezone: '+07:00',
 };
 
 let pool = null;
@@ -45,19 +46,17 @@ async function testConnection() {
 
 /**
  * Thực thi câu truy vấn SQL thông thường
+ * - Khi MySQL kết nối thành công: Thực thi trực tiếp trên MySQL, ném lỗi nghiệp vụ/cú pháp nếu có.
+ * - Khi chưa kết nối MySQL (!isConnected): Sử dụng bộ giả lập RAM (In-Memory Fallback).
  */
 async function query(sql, params = []) {
   if (isConnected) {
-    try {
-      const p = getPool();
-      const [results] = await p.query(sql, params);
-      return results;
-    } catch (err) {
-      console.warn(`[MySQL Query Error] ${err.message}. Chuyển sang xử lý dự phòng.`);
-    }
+    const p = getPool();
+    const [results] = await p.query(sql, params);
+    return results;
   }
 
-  // In-memory fallback query handler
+  // In-memory fallback query handler (chỉ kích hoạt khi !isConnected)
   const normalized = sql.toLowerCase().replace(/\s+/g, ' ').trim();
   const now = new Date();
   const todayStr = (d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'))(now);
@@ -158,21 +157,13 @@ async function query(sql, params = []) {
         }
         grouped[dStr].transaction_count += 1;
         grouped[dStr].total_transactions += 1;
-        grouped[dStr].tickets_count += 2;
+        const relatedTickets = (memory.tickets || []).filter(
+          (t) => t.booking_id === p.booking_id && ['active', 'used'].includes(t.status)
+        );
+        grouped[dStr].tickets_count += Math.max(1, relatedTickets.length);
         grouped[dStr].total_revenue += parseFloat(p.amount || 0);
       });
-    const result = Object.values(grouped);
-    if (result.length === 0) {
-      result.push({
-        date: todayStr,
-        sale_date: todayStr,
-        transaction_count: 1,
-        total_transactions: 1,
-        tickets_count: 2,
-        total_revenue: 220000,
-      });
-    }
-    return result;
+    return Object.values(grouped);
   }
 
   // Analytics: Top Movies by Revenue
@@ -1985,29 +1976,28 @@ async function query(sql, params = []) {
 
 /**
  * Thực thi Transaction hỗ trợ Locking (SELECT FOR UPDATE)
+ * - Khi MySQL kết nối: Thực hiện transaction thật trên MySQL với beginTransaction, commit, rollback.
+ *   Nếu có lỗi nghiệp vụ hoặc DB, ném lỗi ra ngoài, TUYỆT ĐỐI KHÔNG rơi xuống fallback RAM.
+ * - Khi chưa kết nối MySQL (!isConnected): Sử dụng snapshot rollback trên bộ nhớ RAM.
  */
 async function withTransaction(callback) {
   if (isConnected) {
+    const p = getPool();
+    const connection = await p.getConnection();
     try {
-      const p = getPool();
-      const connection = await p.getConnection();
-      try {
-        await connection.beginTransaction();
-        const result = await callback(connection);
-        await connection.commit();
-        return result;
-      } catch (error) {
-        await connection.rollback();
-        throw error;
-      } finally {
-        connection.release();
-      }
-    } catch (err) {
-      console.warn(`[MySQL Transaction Fallback] ${err.message}.`);
+      await connection.beginTransaction();
+      const result = await callback(connection);
+      await connection.commit();
+      return result;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
   }
 
-  // Fallback in-memory transaction with snapshot & rollback capability
+  // Fallback in-memory transaction with snapshot & rollback capability (chỉ khi !isConnected)
   const snapshot = {
     inventory_ingredients: JSON.parse(JSON.stringify(memory.inventory_ingredients || [])),
     inventory_logs: JSON.parse(JSON.stringify(memory.inventory_logs || [])),
