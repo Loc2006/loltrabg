@@ -43,13 +43,13 @@ export function Virtual3DSeatViewModal({ seat, schedule, isOpen, onClose }) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-md animate-fade-in"
       style={{
         position: 'fixed',
         inset: 0,
         width: '100vw',
         height: '100vh',
-        zIndex: 9999,
+        zIndex: 99999,
         background: 'rgba(0, 0, 0, 0.85)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
