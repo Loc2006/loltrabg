@@ -223,8 +223,20 @@ async function verifyTicket(req, res, next) {
       });
     }
 
-    // Đánh dấu vé đã sử dụng (Check-in)
-    await db.query(`UPDATE tickets SET status = 'used' WHERE id = ?`, [ticket.id]);
+    // STT 21: Soát vé nguyên tử (Atomic Update) chống race condition
+    const updateResult = await db.query(
+      `UPDATE tickets SET status = 'used' WHERE id = ? AND status = 'active'`,
+      [ticket.id]
+    );
+
+    const affectedRows = updateResult?.affectedRows ?? updateResult?.[0]?.affectedRows ?? 0;
+    if (affectedRows === 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Vé này vừa được soát tại cổng hoặc không còn ở trạng thái hợp lệ.',
+        data: ticket,
+      });
+    }
 
     return res.status(200).json({
       success: true,

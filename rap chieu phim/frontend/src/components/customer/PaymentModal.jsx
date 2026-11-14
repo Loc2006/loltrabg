@@ -99,21 +99,28 @@ export function PaymentModal({
   const loyaltyDeduction = useLoyaltyPoints ? Math.min(amountAfterVoucher, availablePoints) : 0;
   const finalTotalAmount = Math.max(0, amountAfterVoucher - loyaltyDeduction);
 
-  const handleApplyVoucher = (codeToApply) => {
+  const handleApplyVoucher = async (codeToApply) => {
     const code = (codeToApply || voucherInput || '').trim().toUpperCase();
     setVoucherError('');
     if (!code) {
       setVoucherError('Vui lòng nhập mã giảm giá.');
       return;
     }
-    const walletVouchers = voucherWallet.getMyVouchers().filter((v) => !v.isUsed);
-    const found = walletVouchers.find((v) => v.code === code) || AVAILABLE_VOUCHERS.find((v) => v.code === code);
-    if (!found) {
-      setVoucherError('Mã giảm giá không tồn tại hoặc đã hết hạn.');
-      return;
+    try {
+      const res = await api.validateVoucher({ code, total_amount: subtotal });
+      if (res.success && res.data) {
+        setAppliedVoucher({
+          code: res.data.voucherCode,
+          discountAmount: res.data.discountAmount,
+          desc: res.data.desc,
+        });
+        setVoucherInput(res.data.voucherCode);
+      } else {
+        setVoucherError(res.message || 'Mã giảm giá không hợp lệ.');
+      }
+    } catch (err) {
+      setVoucherError(err.message || 'Mã giảm giá không tồn tại hoặc đã hết hạn.');
     }
-    setAppliedVoucher(found);
-    setVoucherInput(found.code);
   };
 
   const handleRemoveVoucher = () => {
@@ -129,6 +136,7 @@ export function PaymentModal({
       const res = await api.createMomoPayment({
         booking_id: activeBooking.bookingId,
         request_type: reqType,
+        voucher_code: appliedVoucher?.code || undefined,
       });
       if (res.success && res.data) {
         setMomoSession(res.data);
@@ -232,6 +240,7 @@ export function PaymentModal({
         booking_id: activeBooking.bookingId,
         payment_method: method,
         simulate_failure: isFailure,
+        voucher_code: appliedVoucher?.code || undefined,
       });
 
       if (res.success && res.data?.paymentStatus === 'success') {

@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const db = require('../config/database');
+const { validateAndCalculateVoucher } = require('../config/vouchers');
 
 // Bộ nhớ tạm lưu phiên giao dịch MoMo Sandbox để đối chiếu IPN & Return URL
 const pendingMomoOrders = new Map();
@@ -107,12 +108,12 @@ async function finalizeBookingTransaction({
       throw new Error('Đơn đặt vé này đã bị hủy hoặc hết hạn thời gian giữ 10 phút. Vui lòng chọn ghế lại.');
     }
 
-    // 2. Kiểm tra các ghế đang giữ của đơn đặt này
+    // 2. STT 20: Kiểm tra các ghế đang giữ của đơn đặt này KÈM điều kiện hold_expire > NOW()
     const [heldSeats] = await conn.query(
-      `SELECT bs.*, s.row_number, s.seat_number 
+      `SELECT bs.*, s.row_number, s.seat_number, s.seat_type 
        FROM booking_seats bs
        JOIN seats s ON bs.seat_id = s.id
-       WHERE bs.booking_id = ? AND bs.status = 'holding'
+       WHERE bs.booking_id = ? AND bs.status = 'holding' AND bs.hold_expire > NOW()
        FOR UPDATE`,
       [bookingId]
     );
@@ -120,15 +121,23 @@ async function finalizeBookingTransaction({
     if (!heldSeats || heldSeats.length === 0) {
       await conn.query(`UPDATE booking_seats SET status = 'released' WHERE booking_id = ?`, [bookingId]);
       await conn.query(`UPDATE bookings SET status = 'expired' WHERE id = ?`, [bookingId]);
-      throw new Error('Thời gian giữ ghế 10 phút đã hết hạn hoặc không tìm thấy ghế. Ghế đã được tự động giải phóng.');
+      return {
+        paymentStatus: 'failed',
+        isExpired: true,
+        message: 'Thời gian giữ chỗ 10 phút đã hết hạn. Các ghế đã được tự động giải phóng.',
+      };
     }
+
+    // STT 22: Số tiền thực thu = total_amount - discount_amount
+    const discountAmount = Math.round(Number(booking.discount_amount || 0));
+    const payableAmount = Math.max(0, Math.round(Number(booking.total_amount)) - discountAmount);
 
     // 3. Nếu giao dịch thất bại hoặc người dùng hủy thanh toán (BR09)
     if (simulateFailure) {
       await conn.query(
         `INSERT INTO payments (booking_id, payment_method, amount, transaction_code, status)
          VALUES (?, ?, ?, ?, 'failed')`,
-        [bookingId, paymentMethod, booking.total_amount, transactionCode]
+        [bookingId, paymentMethod, payableAmount, transactionCode]
       );
       await conn.query(`UPDATE booking_seats SET status = 'released' WHERE booking_id = ?`, [bookingId]);
       await conn.query(`UPDATE bookings SET status = 'cancelled' WHERE id = ?`, [bookingId]);
@@ -139,11 +148,11 @@ async function finalizeBookingTransaction({
       };
     }
 
-    // 4. Thanh toán THÀNH CÔNG:
+    // 4. Thanh toán THÀNH CÔNG: Ghi nhận giao dịch theo số tiền thực thu
     await conn.query(
       `INSERT INTO payments (booking_id, payment_method, amount, transaction_code, status)
        VALUES (?, ?, ?, ?, 'success')`,
-      [bookingId, paymentMethod, booking.total_amount, transactionCode]
+      [bookingId, paymentMethod, payableAmount, transactionCode]
     );
 
     await conn.query(`UPDATE bookings SET status = 'paid' WHERE id = ?`, [bookingId]);
@@ -204,6 +213,9 @@ async function finalizeBookingTransaction({
       transactionCode,
       paymentMethod,
       totalAmount: booking.total_amount,
+      discountAmount,
+      payableAmount,
+      voucherCode: booking.voucher_code || null,
       movieName: booking.movie_name,
       roomName: booking.room_name,
       screeningTime: booking.start_time,
@@ -225,13 +237,30 @@ async function processPayment(req, res, next) {
       });
     }
 
-    const { booking_id, payment_method = 'banking', simulate_failure = false } = req.body;
+    const { booking_id, payment_method = 'banking', simulate_failure = false, voucher_code } = req.body;
 
     if (!booking_id) {
       return res.status(400).json({
         success: false,
         message: 'Vui lòng cung cấp mã đơn đặt vé (booking_id).',
       });
+    }
+
+    // STT 22: Xác thực và áp dụng voucher nếu có
+    if (voucher_code) {
+      const bookingRows = await db.query(`SELECT * FROM bookings WHERE id = ?`, [booking_id]);
+      const booking = Array.isArray(bookingRows) ? bookingRows[0] : bookingRows;
+      if (!booking) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy đơn đặt vé.' });
+      }
+      const vResult = validateAndCalculateVoucher(voucher_code, booking.total_amount);
+      if (!vResult.valid) {
+        return res.status(400).json({ success: false, message: vResult.error });
+      }
+      await db.query(
+        `UPDATE bookings SET voucher_code = ?, discount_amount = ? WHERE id = ?`,
+        [vResult.voucherCode, vResult.discountAmount, booking_id]
+      );
     }
 
     const transactionCode = `TXN-${payment_method.toUpperCase()}-${Date.now().toString().slice(-8)}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -264,7 +293,7 @@ async function processPayment(req, res, next) {
  */
 async function createMomoPayment(req, res, next) {
   try {
-    const { booking_id, request_type = 'captureWallet' } = req.body;
+    const { booking_id, request_type = 'captureWallet', voucher_code } = req.body;
 
     if (!booking_id) {
       return res.status(400).json({
@@ -296,6 +325,24 @@ async function createMomoPayment(req, res, next) {
       });
     }
 
+    // STT 22: Xác thực và áp dụng voucher nếu có
+    let discountAmount = Math.round(Number(booking.discount_amount || 0));
+    let voucherCode = booking.voucher_code || null;
+
+    if (voucher_code) {
+      const vResult = validateAndCalculateVoucher(voucher_code, booking.total_amount);
+      if (!vResult.valid) {
+        return res.status(400).json({ success: false, message: vResult.error });
+      }
+      voucherCode = vResult.voucherCode;
+      discountAmount = vResult.discountAmount;
+
+      await db.query(
+        `UPDATE bookings SET voucher_code = ?, discount_amount = ? WHERE id = ?`,
+        [voucherCode, discountAmount, booking.id]
+      );
+    }
+
     const config = getMomoConfig();
     const partnerCode = config.partnerCode;
     const accessKey = config.accessKey;
@@ -304,7 +351,8 @@ async function createMomoPayment(req, res, next) {
     const timestamp = Date.now();
     const orderId = `${partnerCode}_${booking.booking_code}_${timestamp}`;
     const requestId = `REQ_${timestamp}`;
-    const amount = String(Math.round(Number(booking.total_amount) || 90000));
+    const payableAmount = Math.max(0, Math.round(Number(booking.total_amount)) - discountAmount);
+    const amount = String(payableAmount);
     const orderInfo = `Thanh toan ve xem phim Night Movie - Ma don ${booking.booking_code}`;
     const redirectUrl = config.redirectUrl;
     const ipnUrl = config.ipnUrl;
@@ -728,14 +776,15 @@ async function handleMomoIpn(req, res) {
     }
 
     if (bookingId) {
-      // STT 07: Đối chiếu số tiền IPN nhận được với bookings.total_amount
-      const bookingRows = await db.query(`SELECT id, total_amount FROM bookings WHERE id = ?`, [bookingId]);
+      // STT 07 & STT 22: Đối chiếu số tiền IPN nhận được với số thực thu (total_amount - discount_amount)
+      const bookingRows = await db.query(`SELECT id, total_amount, discount_amount, voucher_code FROM bookings WHERE id = ?`, [bookingId]);
       const booking = Array.isArray(bookingRows) ? bookingRows[0] : bookingRows;
       if (!booking) {
         return res.status(404).json({ message: 'Booking not found' });
       }
-      if (Math.round(Number(amount)) !== Math.round(Number(booking.total_amount))) {
-        console.warn(`[MoMo IPN] Số tiền không khớp! Nhận: ${amount}, Yêu cầu: ${booking.total_amount}`);
+      const expectedPayable = Math.max(0, Math.round(Number(booking.total_amount)) - Math.round(Number(booking.discount_amount || 0)));
+      if (Math.round(Number(amount)) !== expectedPayable) {
+        console.warn(`[MoMo IPN] Số tiền không khớp! Nhận: ${amount}, Yêu cầu thực thu: ${expectedPayable}`);
         return res.status(400).json({ message: 'Payment amount mismatch' });
       }
 
@@ -846,16 +895,17 @@ async function verifyMomoReturn(req, res, next) {
       });
     }
 
-    // STT 07: Đối chiếu số tiền với bookings.total_amount
-    const bookingRows = await db.query(`SELECT id, total_amount FROM bookings WHERE id = ?`, [targetBookingId]);
+    // STT 07 & STT 22: Đối chiếu số tiền với số thực thu (total_amount - discount_amount)
+    const bookingRows = await db.query(`SELECT id, total_amount, discount_amount, voucher_code FROM bookings WHERE id = ?`, [targetBookingId]);
     const booking = Array.isArray(bookingRows) ? bookingRows[0] : bookingRows;
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn đặt vé.' });
     }
-    if (amount !== undefined && Math.round(Number(amount)) !== Math.round(Number(booking.total_amount))) {
+    const expectedPayable = Math.max(0, Math.round(Number(booking.total_amount)) - Math.round(Number(booking.discount_amount || 0)));
+    if (amount !== undefined && Math.round(Number(amount)) !== expectedPayable) {
       return res.status(400).json({
         success: false,
-        message: `Số tiền thanh toán MoMo (${amount}) không khớp với tổng tiền đơn đặt vé (${booking.total_amount}).`,
+        message: `Số tiền thanh toán MoMo (${amount}) không khớp với số tiền thực thu của đơn (${expectedPayable}).`,
       });
     }
 
@@ -890,6 +940,7 @@ async function verifyMomoReturn(req, res, next) {
 }
 
 module.exports = {
+  finalizeBookingTransaction,
   processPayment,
   createMomoPayment,
   renderMomoSandboxGateway,

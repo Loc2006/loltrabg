@@ -88,6 +88,7 @@ app.use('/api/handovers', require('./routes/cashHandoverRoutes'));
 app.use('/api/kdm', require('./routes/kdmRoutes'));
 app.use('/api/turnaround', require('./routes/turnaroundRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/vouchers', require('./routes/voucherRoutes'));
 
 // Error Handlers
 app.use(notFoundHandler);

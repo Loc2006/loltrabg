@@ -1812,6 +1812,8 @@ async function query(sql, params = []) {
       screening_id: parseInt(params[1], 10),
       booking_code: params[2],
       total_amount: parseFloat(params[3]),
+      voucher_code: null,
+      discount_amount: 0,
       status: params[4] || 'pending',
       booking_time: now.toISOString().replace('T', ' ').slice(0, 19),
     };
@@ -1820,6 +1822,17 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update bookings')) {
+    if (normalized.includes('voucher_code') && normalized.includes('discount_amount')) {
+      const vCode = params[0];
+      const dAmount = parseFloat(params[1]) || 0;
+      const id = parseInt(params[2], 10);
+      const b = memory.bookings.find((item) => item.id === id);
+      if (b) {
+        b.voucher_code = vCode;
+        b.discount_amount = dAmount;
+      }
+      return { affectedRows: b ? 1 : 0 };
+    }
     if (normalized.includes('set status = ? where id = ?')) {
       const status = params[0];
       const id = parseInt(params[1], 10);
@@ -1860,6 +1873,14 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update booking_seats')) {
+    if (normalized.includes('hold_expire = ? where booking_id = ?')) {
+      const exp = params[0];
+      const bookingId = parseInt(params[1], 10);
+      memory.booking_seats.forEach((bs) => {
+        if (bs.booking_id === bookingId) bs.hold_expire = exp;
+      });
+      return { affectedRows: 1 };
+    }
     // Release single seat on ticket cancel: WHERE booking_id = ? AND seat_id = ?
     if (normalized.includes('where booking_id = ? and seat_id = ?')) {
       const bookingId = parseInt(params[0], 10);
@@ -1931,14 +1952,18 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update tickets')) {
-    const idOrCode = params[params.length - 1];
+    const idOrCode = params[0] !== undefined && params.length === 1 ? params[0] : params[params.length - 1];
     const t = memory.tickets.find((item) => item.id === parseInt(idOrCode, 10) || item.ticket_code === idOrCode);
     if (t) {
+      if (normalized.includes("status = 'active'") && t.status !== 'active') {
+        return { affectedRows: 0 };
+      }
       if (normalized.includes("status = 'used'")) t.status = 'used';
       else if (normalized.includes("status = 'cancelled'")) t.status = 'cancelled';
       else if (params[0] !== undefined) t.status = params[0];
+      return { affectedRows: 1 };
     }
-    return { affectedRows: t ? 1 : 0 };
+    return { affectedRows: 0 };
   }
 
   // O. Notifications Mutations

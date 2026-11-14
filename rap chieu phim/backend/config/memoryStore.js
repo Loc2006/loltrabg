@@ -381,11 +381,11 @@ const schedules = [
 })();
 
 const bookings = [
-  { id: 1, customer_id: 1, screening_id: 5, booking_code: 'BK-20260914-001', booking_time: `${todayStr} 10:15:00`, total_amount: 220000, status: 'paid' },
-  { id: 2, customer_id: 1, screening_id: 1, booking_code: 'BK-20260914-002', booking_time: `${todayStr} 11:00:00`, total_amount: 150000, status: 'paid' },
-  { id: 3, customer_id: 1, screening_id: 7, booking_code: 'BK-20260914-003', booking_time: `${todayStr} 11:30:00`, total_amount: 140000, status: 'pending' },
-  { id: 4, customer_id: 1, screening_id: 3, booking_code: 'BK-20260914-004', booking_time: `${todayStr} 12:00:00`, total_amount: 180000, status: 'paid' },
-  { id: 5, customer_id: 2, screening_id: 1, booking_code: 'BK-20260914-005', booking_time: `${todayStr} 12:30:00`, total_amount: 150000, status: 'paid' },
+  { id: 1, customer_id: 1, screening_id: 5, booking_code: 'BK-20260914-001', booking_time: `${todayStr} 10:15:00`, total_amount: 220000, voucher_code: null, discount_amount: 0, status: 'paid' },
+  { id: 2, customer_id: 1, screening_id: 1, booking_code: 'BK-20260914-002', booking_time: `${todayStr} 11:00:00`, total_amount: 150000, voucher_code: null, discount_amount: 0, status: 'paid' },
+  { id: 3, customer_id: 1, screening_id: 7, booking_code: 'BK-20260914-003', booking_time: `${todayStr} 11:30:00`, total_amount: 140000, voucher_code: null, discount_amount: 0, status: 'pending' },
+  { id: 4, customer_id: 1, screening_id: 3, booking_code: 'BK-20260914-004', booking_time: `${todayStr} 12:00:00`, total_amount: 180000, voucher_code: null, discount_amount: 0, status: 'paid' },
+  { id: 5, customer_id: 2, screening_id: 1, booking_code: 'BK-20260914-005', booking_time: `${todayStr} 12:30:00`, total_amount: 150000, voucher_code: null, discount_amount: 0, status: 'paid' },
 ];
 
 const booking_seats = [
