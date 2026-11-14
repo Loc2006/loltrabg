@@ -24,3 +24,4 @@ INSERT IGNORE INTO `movie_reviews` (`id`, `movie_id`, `user_id`, `user_name`, `r
 (2, 1, 8, 'Trần Thị Mai', 5, 'Diễn xuất của Timothée và Zendaya quá tuyệt vời. Rạp chiếu ghế ngồi êm ái, bắp phô mai rất ngon.', 0, '2026-09-14 11:15:00'),
 (3, 2, 7, 'Nguyễn Văn An (Diamond VIP)', 5, 'Kiệt tác của Christopher Nolan! Phân cảnh thử bom Trinity khiến cả rạp nín thở. Trải nghiệm điện ảnh đỉnh cao.', 0, '2026-09-14 09:00:00'),
 (4, 4, 8, 'Trần Thị Mai', 4, 'Phim gia đình rất xúc động và ý nghĩa!', 0, '2026-09-14 08:45:00');
+

@@ -685,10 +685,11 @@ SET
 WHERE DATE(`start_time`) < CURDATE();
 
 -- 5. STT 16: Đảm bảo tính toàn vẹn giữa Bookings, Booking Seats, Payments và Tickets
--- Gỡ bỏ các vé thuộc về đơn đặt chưa thanh toán
-DELETE t FROM `tickets` t 
+-- Không xóa vật lý dữ liệu; nếu có vé thuộc đơn chưa thanh toán, cập nhật trạng thái vé thành 'cancelled'
+UPDATE `tickets` t 
 JOIN `bookings` b ON t.`booking_id` = b.`id` 
-WHERE b.`status` != "paid";
+SET t.`status` = 'cancelled'
+WHERE b.`status` != 'paid' AND t.`status` != 'cancelled';
 
 -- Đảm bảo mỗi đơn paid có thanh toán tương ứng
 INSERT IGNORE INTO `payments` (`id`, `booking_id`, `payment_method`, `amount`, `transaction_code`, `payment_time`, `status`) VALUES

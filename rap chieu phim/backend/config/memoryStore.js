@@ -570,10 +570,10 @@ const turnaround_checklists = [
 
 // --- 25. Đánh Giá & Bình Luận Phim (Movie Reviews & Ratings) ---
 const movie_reviews = [
-  { id: 1, movie_id: 1, user_id: 7, user_name: 'Nguyễn Văn An (Diamond VIP)', rating: 5, comment: 'Phim cực đỉnh, âm thanh Dolby Atmos tại rạp đánh thức mọi giác quan! Hình ảnh sa mạc cát choáng ngợp.', is_verified_buyer: 1, created_at: `${todayStr} 10:30:00` },
-  { id: 2, movie_id: 1, user_id: 8, user_name: 'Trần Thị Mai', rating: 5, comment: 'Diễn xuất của Timothée và Zendaya quá tuyệt vời. Rạp chiếu ghế ngồi êm ái, bắp phô mai rất ngon.', is_verified_buyer: 0, created_at: `${todayStr} 11:15:00` },
-  { id: 3, movie_id: 2, user_id: 7, user_name: 'Nguyễn Văn An (Diamond VIP)', rating: 5, comment: 'Kiệt tác của Christopher Nolan! Phân cảnh thử bom Trinity khiến cả rạp nín thở. Trải nghiệm điện ảnh đỉnh cao.', is_verified_buyer: 0, created_at: `${todayStr} 09:00:00` },
-  { id: 4, movie_id: 4, user_id: 8, user_name: 'Trần Thị Mai', rating: 4, comment: 'Phim gia đình rất xúc động và ý nghĩa!', is_verified_buyer: 0, created_at: `${todayStr} 08:45:00` },
+  { id: 1, movie_id: 1, user_id: 7, user_name: 'Nguyễn Văn An (Diamond VIP)', rating: 5, comment: 'Phim cực đỉnh, âm thanh Dolby Atmos tại rạp đánh thức mọi giác quan! Hình ảnh sa mạc cát choáng ngợp.', is_verified_buyer: 1, created_at: '2026-09-14 10:30:00' },
+  { id: 2, movie_id: 1, user_id: 8, user_name: 'Trần Thị Mai', rating: 5, comment: 'Diễn xuất của Timothée và Zendaya quá tuyệt vời. Rạp chiếu ghế ngồi êm ái, bắp phô mai rất ngon.', is_verified_buyer: 0, created_at: '2026-09-14 11:15:00' },
+  { id: 3, movie_id: 2, user_id: 7, user_name: 'Nguyễn Văn An (Diamond VIP)', rating: 5, comment: 'Kiệt tác của Christopher Nolan! Phân cảnh thử bom Trinity khiến cả rạp nín thở. Trải nghiệm điện ảnh đỉnh cao.', is_verified_buyer: 0, created_at: '2026-09-14 09:00:00' },
+  { id: 4, movie_id: 4, user_id: 8, user_name: 'Trần Thị Mai', rating: 4, comment: 'Phim gia đình rất xúc động và ý nghĩa!', is_verified_buyer: 0, created_at: '2026-09-14 08:45:00' },
 ];
 
 const payments = [

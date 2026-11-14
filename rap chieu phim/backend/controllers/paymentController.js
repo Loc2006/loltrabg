@@ -110,7 +110,7 @@ async function finalizeBookingTransaction({
 
     // 2. STT 20: Kiểm tra các ghế đang giữ của đơn đặt này KÈM điều kiện hold_expire > NOW()
     const [heldSeats] = await conn.query(
-      `SELECT bs.*, s.row_number, s.seat_number, s.seat_type 
+      `SELECT bs.*, s.\`row_number\`, s.seat_number, s.seat_type 
        FROM booking_seats bs
        JOIN seats s ON bs.seat_id = s.id
        WHERE bs.booking_id = ? AND bs.status = 'holding' AND bs.hold_expire > NOW()

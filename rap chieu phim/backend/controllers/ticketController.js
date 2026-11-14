@@ -12,7 +12,7 @@ async function getAllTickets(req, res, next) {
              m.name AS movie_name, m.poster AS movie_poster,
              s.start_time, s.end_time,
              r.name AS room_name,
-             st.row_number, st.seat_number, st.seat_type,
+             st.\`row_number\`, st.seat_number, st.seat_type,
              c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone,
              b.booking_code
       FROM tickets t
@@ -73,7 +73,7 @@ async function getMyTickets(req, res, next) {
               m.name AS movie_name, m.poster AS movie_poster, m.duration, m.age_rating,
               s.start_time, s.end_time, s.format AS screening_format,
               r.name AS room_name, r.room_type,
-              st.row_number, st.seat_number, st.seat_type,
+              st.\`row_number\`, st.seat_number, st.seat_type,
               b.booking_code, b.total_amount
        FROM tickets t
        JOIN screening_schedules s ON t.screening_id = s.id
@@ -106,7 +106,7 @@ async function getTicketById(req, res, next) {
               m.name AS movie_name, m.poster AS movie_poster, m.duration, m.age_rating,
               s.start_time, s.end_time, s.format AS screening_format,
               r.name AS room_name, r.room_type,
-              st.row_number, st.seat_number, st.seat_type,
+              st.\`row_number\`, st.seat_number, st.seat_type,
               c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone,
               b.booking_code, b.total_amount
        FROM tickets t
@@ -162,7 +162,7 @@ async function verifyTicket(req, res, next) {
               m.name AS movie_name,
               s.start_time, s.end_time,
               r.name AS room_name,
-              st.row_number, st.seat_number,
+              st.\`row_number\`, st.seat_number,
               c.name AS customer_name,
               b.status AS booking_status
        FROM tickets t
