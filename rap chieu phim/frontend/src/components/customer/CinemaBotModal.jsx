@@ -26,7 +26,6 @@ export function CinemaBotModal({
   onSelectMovie,
   onSelectSchedule,
   onNavigate,
-  onOpenLuckyWheel,
   onOpenInSeatDelivery
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -41,7 +40,7 @@ export function CinemaBotModal({
       id: 1,
       sender: 'bot',
       text: 'Xin chào! Tôi là trợ lý rạp Night Movie 🍿🎬. Tôi có thể hỗ trợ bạn tra cứu lịch chiếu, vị trí ghế ngồi hoặc giải đáp thắc mắc về dịch vụ!',
-      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🎡 Quay voucher', '💡 Ghế Sweet Spot']
+      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🍿 Menu bắp nước', '💡 Ghế Sweet Spot']
     }
   ]);
 
@@ -170,7 +169,7 @@ export function CinemaBotModal({
           id: Date.now() + 1,
           sender: 'bot',
           text: res.reply,
-          quickReplies: res.quickReplies || ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🎡 Quay voucher'],
+          quickReplies: res.quickReplies || ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🍿 Menu bắp nước'],
           actionType: res.actionType,
           actionLabel: res.actionLabel,
         };
@@ -216,20 +215,20 @@ export function CinemaBotModal({
       return {
         id: Date.now() + 1,
         sender: 'bot',
-        text: 'Xin chào! Tôi là **CinemaBot** - Trợ lý đặt vé và chăm sóc khách hàng của Rạp Night Movie 🍿🎬.\n\nTôi có thể giúp bạn:\n- 🎬 Tra cứu danh sách **phim hot đang chiếu**\n- 📅 Xem **lịch chiếu & giá vé** hôm nay\n- 💡 Hướng dẫn chọn **vị trí ghế vàng Sweet Spot**\n- 🎡 Tham gia **Vòng quay may mắn** nhận voucher giảm 20.000đ\n\nBạn cần hỗ trợ gì ạ?',
-        quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🎡 Quay voucher', '🍿 Menu bắp nước']
+        text: 'Xin chào! Tôi là **CinemaBot** - Trợ lý đặt vé và chăm sóc khách hàng của Rạp Night Movie 🍿🎬.\n\nTôi có thể giúp bạn:\n- 🎬 Tra cứu danh sách **phim hot đang chiếu**\n- 📅 Xem **lịch chiếu & giá vé** hôm nay\n- 💡 Hướng dẫn chọn **vị trí ghế vàng Sweet Spot**\n- 🍿 Gọi **bắp nước giao tận phòng chiếu**\n\nBạn cần hỗ trợ gì ạ?',
+        quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🍿 Menu bắp nước', '💡 Ghế Sweet Spot']
       };
     }
 
-    // 1. Voucher / Lucky Wheel
-    if (q.includes('voucher') || q.includes('quay') || q.includes('khuyến mãi') || q.includes('mã giảm') || q.includes('giảm giá')) {
+    // 1. Voucher & Promotions
+    if (q.includes('voucher') || q.includes('khuyến mãi') || q.includes('mã giảm') || q.includes('giảm giá') || q.includes('ưu đãi')) {
       return {
         id: Date.now() + 1,
         sender: 'bot',
-        text: '🎁 **Vòng Quay May Mắn Night Movie** đang diễn ra! Bạn có thể nhận ngay voucher giảm 20.000đ, giảm 15% tổng đơn, hoặc bắp rang miễn phí 55k!',
-        actionType: 'lucky_wheel',
-        actionLabel: '🎡 Mở Vòng Quay May Mắn Ngay',
-        quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Đặt vé phim']
+        text: '🎁 **Chính sách ưu đãi tại Night Movie**:\n- Giảm **15%** cho thành viên & học sinh sinh viên vào Thứ 4 Vui Vẻ.\n- Tặng combo bắp nước khi đặt vé nhóm từ 4 người trở lên.\n- Nhập mã voucher ưu đãi khi thanh toán để được giảm trực tiếp trên đơn vé!',
+        actionType: 'schedules',
+        actionLabel: '🎫 Xem Lịch Chiếu & Đặt Vé',
+        quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay']
       };
     }
 
@@ -263,7 +262,7 @@ export function CinemaBotModal({
         text: '🍿 **Thực đơn Bắp & Nước Night Movie**:\n- **Combo Solo**: 1 Bắp Rang Bơ + 1 Nước ngọt lớn (75.000đ)\n- **Combo Couple**: 1 Bắp Rang Bơ lớn + 2 Nước ngọt (105.000đ)\n- Bắp vị Phô Mai, Caramel thơm béo nóng giòn giã!\n\nĐặc biệt: Bạn có thể chọn bắp nước kèm vé hoặc dùng dịch vụ **Gọi Món Tận Ghế** nhân viên sẽ mang đến tận vị trí ngồi!',
         actionType: 'in_seat_delivery',
         actionLabel: '🍿 Mở Gọi Món Tận Ghế',
-        quickReplies: ['🔥 Phim hot đang chiếu', '🎡 Quay voucher']
+        quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay']
       };
     }
 
@@ -272,10 +271,10 @@ export function CinemaBotModal({
       return {
         id: Date.now() + 1,
         sender: 'bot',
-        text: '🎟️ **Bảng giá vé rạp Night Movie**:\n- Vé 2D Tiêu Chuẩn: **75.000đ - 90.000đ**\n- Vé 2D VIP: **85.000đ - 100.000đ**\n- Vé 3D / IMAX Laser: **120.000đ - 145.000đ**\n- Thành viên & Học sinh sinh viên: Giảm thêm **15%** kèm quay voucher may mắn!',
+        text: '🎟️ **Bảng giá vé rạp Night Movie**:\n- Vé 2D Tiêu Chuẩn: **75.000đ - 90.000đ**\n- Vé 2D VIP: **85.000đ - 100.000đ**\n- Vé 3D / IMAX Laser: **120.000đ - 145.000đ**\n- Thành viên & Học sinh sinh viên: Giảm thêm **15%**!',
         actionType: 'schedules',
         actionLabel: '📅 Xem Toàn Bộ Lịch Chiếu',
-        quickReplies: ['🔥 Phim hot đang chiếu', '🎡 Quay voucher']
+        quickReplies: ['🔥 Phim hot đang chiếu', '🍿 Menu bắp nước']
       };
     }
 
@@ -294,7 +293,7 @@ export function CinemaBotModal({
         text: `🎬 Tôi đã tìm thấy phim **${matchedMovie.name || matchedMovie.title}** (${matchedMovie.format || matchedMovie.screening_format || '2D/IMAX'} - ${matchedMovie.duration || 120} phút).\nĐiểm đánh giá: ⭐ **${matchedMovie.rating || '9.5'}/10**. Bạn có muốn chọn suất chiếu để giữ ghế ngay không?`,
         movieData: matchedMovie,
         schedulesData: movieSchedules.slice(0, 3),
-        quickReplies: ['🎫 Xem tất cả suất chiếu', '🎡 Quay voucher']
+        quickReplies: ['🎫 Xem tất cả suất chiếu', '🔥 Phim hot đang chiếu']
       };
     }
 
@@ -322,7 +321,7 @@ export function CinemaBotModal({
         moviesListData: sampleMovies,
         actionType: 'movies',
         actionLabel: '🎬 Khám Phá Toàn Bộ Phim',
-        quickReplies: ['🎫 Suất chiếu tối nay', '🎡 Quay voucher', '💡 Ghế Sweet Spot']
+        quickReplies: ['🎫 Suất chiếu tối nay', '🍿 Menu bắp nước', '💡 Ghế Sweet Spot']
       };
     }
 
@@ -331,15 +330,12 @@ export function CinemaBotModal({
       id: Date.now() + 1,
       sender: 'bot',
       text: 'Trợ lý Night Movie đã nhận được yêu cầu của bạn! Tôi có thể hỗ trợ bạn:\n1. 🎙️ Tra cứu bằng giọng nói hoặc tìm tên phim bom tấn\n2. 🎫 Xem danh sách suất chiếu hôm nay\n3. 💡 Hướng dẫn chọn vị trí ghế ngồi\n4. 🎁 Khám phá ưu đãi vé rạp',
-      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🎡 Quay voucher', '🍿 Menu bắp nước']
+      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🍿 Menu bắp nước']
     };
   };
 
   const handleAction = (type, data) => {
-    if (type === 'lucky_wheel' && onOpenLuckyWheel) {
-      setIsOpen(false);
-      onOpenLuckyWheel();
-    } else if (type === 'in_seat_delivery' && onOpenInSeatDelivery) {
+    if (type === 'in_seat_delivery' && onOpenInSeatDelivery) {
       setIsOpen(false);
       onOpenInSeatDelivery();
     } else if (type === 'my_tickets' && onNavigate) {
@@ -418,7 +414,7 @@ export function CinemaBotModal({
                       id: Date.now(),
                       sender: 'bot',
                       text: 'Cuộc trò chuyện đã được làm mới! Bạn muốn tìm phim nào hôm nay?',
-                      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🎡 Quay voucher']
+                      quickReplies: ['🔥 Phim hot đang chiếu', '🎫 Suất chiếu tối nay', '🍿 Menu bắp nước']
                     }
                   ])
                 }
