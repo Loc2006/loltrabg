@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../services/api';
 import {
   Play,
@@ -132,9 +133,39 @@ export function HomePage({
     }
   };
 
+  // Cơ chế 1: Thoát Tech Modal bằng phím tắt ESC
+  useEffect(() => {
+    if (!selectedTech) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+        setSelectedTech(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedTech]);
+
+  // Cơ chế 2: Khóa cuộn trang nền khi mở Tech Modal và dọn dẹp sạch khi đóng / unmount
+  useEffect(() => {
+    if (selectedTech) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow || 'unset';
+      };
+    }
+  }, [selectedTech]);
+
   const filteredMovies = movies.filter((m) => {
     const matchTab = activeTab === 'all' || m.status === activeTab;
-    const matchGenre = selectedGenre === 'all' || m.genre.includes(selectedGenre);
+    const genreStr = Array.isArray(m.genre)
+      ? m.genre.join(', ')
+      : Array.isArray(m.genres)
+      ? m.genres.join(', ')
+      : typeof m.genre === 'string'
+      ? m.genre
+      : '';
+    const matchGenre = selectedGenre === 'all' || genreStr.toLowerCase().includes(selectedGenre.toLowerCase());
     return matchTab && matchGenre;
   });
 
@@ -302,7 +333,7 @@ export function HomePage({
                         <Clock className="w-4 h-4 text-ruby-400" /> {movie.duration} phút
                       </span>
                       <span>•</span>
-                      <span>{movie.genre}</span>
+                      <span>{Array.isArray(movie.genre) ? movie.genre.join(', ') : Array.isArray(movie.genres) ? movie.genres.join(', ') : movie.genre || movie.genres || 'Chưa phân loại'}</span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-2">
@@ -545,7 +576,7 @@ export function HomePage({
                   <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                     <div onClick={() => setDetailMovie(movie)} className="cursor-pointer">
                       <div className="text-[11px] text-ruby-400 font-semibold truncate mb-1">
-                        {movie.genre}
+                        {Array.isArray(movie.genre) ? movie.genre.join(', ') : Array.isArray(movie.genres) ? movie.genres.join(', ') : movie.genre || movie.genres || 'Chưa phân loại'}
                       </div>
                       <h3 className="font-extrabold text-sm text-white line-clamp-1 group-hover:text-ruby-400 transition-colors">
                         {movie.name}
@@ -685,11 +716,45 @@ export function HomePage({
       </div>
 
       {/* Cinematic Technology Detail Modal */}
-      {selectedTech && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-2xl bg-cinema-900 border border-cinema-700/80 rounded-3xl overflow-hidden shadow-2xl animate-scale-up">
+      {selectedTech && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 9999,
+            background: 'rgba(0, 0, 0, 0.82)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedTech(null);
+          }}
+        >
+          <div
+            className="relative w-full max-w-[700px] max-h-[88vh] flex flex-col overflow-hidden rounded-2xl bg-[#12151f] border border-white/10 shadow-2xl animate-scale-up"
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '700px',
+              maxHeight: '88vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: '16px',
+              background: '#12151f',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header Banner */}
-            <div className="relative h-48 sm:h-56 overflow-hidden">
+            <div className="relative h-48 sm:h-56 overflow-hidden shrink-0">
               <img
                 src={selectedTech.image}
                 alt={selectedTech.title}
@@ -698,17 +763,19 @@ export function HomePage({
                 }}
                 className="w-full h-full object-cover filter brightness-[0.65]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-cinema-900 via-cinema-900/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#12151f] via-[#12151f]/60 to-transparent" />
 
               {/* Close Button */}
               <button
                 onClick={() => setSelectedTech(null)}
-                className="absolute top-4 right-4 p-2 rounded-full bg-black/60 hover:bg-black/90 text-white transition-all border border-white/20"
+                className="absolute top-4 right-4 z-50 w-9 h-9 rounded-full bg-black/75 hover:bg-ruby-600 text-white backdrop-blur-md transition-all flex items-center justify-center border border-white/20 shadow-lg cursor-pointer hover:scale-105 active:scale-95"
+                title="Đóng (phím ESC)"
+                aria-label="Đóng"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="absolute bottom-4 left-6 right-6">
+              <div className="absolute bottom-4 left-6 right-16">
                 <span className={`text-[11px] font-extrabold tracking-wider uppercase px-3 py-1 rounded-lg border backdrop-blur-md ${selectedTech.badgeStyle}`}>
                   {selectedTech.category}
                 </span>
@@ -722,7 +789,14 @@ export function HomePage({
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 sm:p-7 space-y-6">
+            <div
+              className="modal-body flex-1 overflow-y-auto p-6 sm:p-7 space-y-6"
+              style={{
+                overflowY: 'auto',
+                flex: 1,
+                padding: '24px',
+              }}
+            >
               <p className="text-sm text-slate-300 leading-relaxed">
                 {selectedTech.description}
               </p>
@@ -761,7 +835,7 @@ export function HomePage({
                     setSelectedTech(null);
                     if (onNavigate) onNavigate('schedules');
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-ruby-600 to-rose-600 hover:from-ruby-500 hover:to-rose-500 text-white shadow-glow-red flex items-center justify-center gap-1.5"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-ruby-600 to-rose-600 hover:from-ruby-500 hover:to-rose-500 text-white shadow-glow-red flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Ticket className="w-3.5 h-3.5" />
                   <span>Xem Lịch Chiếu</span>
@@ -773,14 +847,15 @@ export function HomePage({
                 <button
                   type="button"
                   onClick={() => setSelectedTech(null)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-cinema-800 hover:bg-cinema-700 text-slate-200 border border-cinema-700 transition-colors"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-cinema-800 hover:bg-cinema-700 text-slate-200 border border-cinema-700 transition-colors cursor-pointer"
                 >
                   Đóng
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Trailer Modal */}
