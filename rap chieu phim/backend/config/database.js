@@ -24,6 +24,10 @@ let isConnected = false;
 function getPool() {
   if (!pool) {
     pool = mysql.createPool(dbConfig);
+    // Đảm bảo mỗi kết nối trong pool luôn đặt múi giờ Việt Nam (+07:00) cho MySQL Server
+    pool.on('connection', (connection) => {
+      connection.query("SET time_zone = '+07:00'");
+    });
   }
   return pool;
 }

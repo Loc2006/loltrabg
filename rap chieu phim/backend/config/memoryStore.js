@@ -9,15 +9,19 @@ const roles = [
   { id: 5, name: 'customer', description: 'Khách hàng đặt vé xem phim' },
 ];
 
+const SEED_BCRYPT_PASSWORD = '$2a$10$40y5qsZxBNRDCnF9ucv3W.CJ7H9ND61dPPmfBlgjebG9jWAVFB/ke'; // 'password123'
+
 const users = [
-  { id: 1, username: 'admin', password: 'password123', role_id: 1, status: 'active', created_at: '2026-09-14 08:00:00' },
-  { id: 2, username: 'manager1', password: 'password123', role_id: 2, status: 'active', created_at: '2026-09-14 08:00:00' },
-  { id: 3, username: 'staff1', password: 'password123', role_id: 3, status: 'active', created_at: '2026-09-14 08:00:00' },
-  { id: 4, username: 'staff2', password: 'password123', role_id: 3, status: 'active', created_at: '2026-09-14 08:00:00' },
-  { id: 5, username: 'tech1', password: 'password123', role_id: 4, status: 'active', created_at: '2026-09-14 08:00:00' },
-  { id: 6, username: 'tech2', password: 'password123', role_id: 4, status: 'active', created_at: '2026-09-14 08:00:00' },
-  { id: 7, username: 'customer1', password: 'password123', role_id: 5, status: 'active', created_at: '2026-09-14 08:00:00' },
-  { id: 8, username: 'customer2', password: 'password123', role_id: 5, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 1, username: 'admin', password: SEED_BCRYPT_PASSWORD, role_id: 1, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 2, username: 'manager1', password: SEED_BCRYPT_PASSWORD, role_id: 2, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 3, username: 'staff1', password: SEED_BCRYPT_PASSWORD, role_id: 3, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 4, username: 'staff2', password: SEED_BCRYPT_PASSWORD, role_id: 3, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 5, username: 'tech1', password: SEED_BCRYPT_PASSWORD, role_id: 4, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 6, username: 'tech2', password: SEED_BCRYPT_PASSWORD, role_id: 4, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 7, username: 'customer1', password: SEED_BCRYPT_PASSWORD, role_id: 5, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 8, username: 'customer2', password: SEED_BCRYPT_PASSWORD, role_id: 5, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 9, username: 'customer3', password: SEED_BCRYPT_PASSWORD, role_id: 5, status: 'active', created_at: '2026-09-14 08:00:00' },
+  { id: 10, username: 'manager2', password: SEED_BCRYPT_PASSWORD, role_id: 2, status: 'active', created_at: '2026-09-14 08:00:00' },
 ];
 
 const customers = [
