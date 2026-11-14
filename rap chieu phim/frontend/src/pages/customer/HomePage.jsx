@@ -120,7 +120,7 @@ export function HomePage({
     setLoading(true);
     try {
       const [moviesRes, schedulesRes] = await Promise.all([
-        api.getMovies({ limit: 16 }),
+        api.getMovies({ limit: 50 }),
         api.getSchedules({ status: 'scheduled' }),
       ]);
       if (moviesRes.success) setMovies(moviesRes.data);
@@ -134,7 +134,7 @@ export function HomePage({
 
   const filteredMovies = movies.filter((m) => {
     const matchTab = activeTab === 'all' || m.status === activeTab;
-    const matchGenre = selectedGenre === 'all' || m.genre.includes(selectedGenre);
+    const matchGenre = selectedGenre === 'all' || (m.genre || '').includes(selectedGenre);
     return matchTab && matchGenre;
   });
 

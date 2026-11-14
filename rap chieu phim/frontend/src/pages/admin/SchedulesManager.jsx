@@ -46,7 +46,9 @@ export function SchedulesManager() {
     setEditingSchedule(null);
     const defaultStart = new Date();
     defaultStart.setHours(defaultStart.getHours() + 2, 0, 0, 0);
-    const startStr = defaultStart.toISOString().slice(0, 16);
+    const startStr = new Date(defaultStart.getTime() - defaultStart.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
 
     setFormData({
       movie_id: movies[0]?.id || '',

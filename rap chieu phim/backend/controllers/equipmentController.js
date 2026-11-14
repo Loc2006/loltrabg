@@ -175,7 +175,7 @@ async function updateEquipment(req, res, next) {
     const { id } = req.params;
     const { name, room_id, status, last_maintenance, next_maintenance, manufacturer } = req.body;
 
-    await db.query(
+    const result = await db.query(
       `UPDATE equipment SET
         name = COALESCE(?, name),
         room_id = COALESCE(?, room_id),
@@ -186,6 +186,13 @@ async function updateEquipment(req, res, next) {
        WHERE id = ?`,
       [name, room_id, status, last_maintenance, next_maintenance, manufacturer, id]
     );
+
+    if (result && result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thiết bị cần cập nhật.',
+      });
+    }
 
     return res.status(200).json({
       success: true,
