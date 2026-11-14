@@ -8,10 +8,18 @@ const pendingMomoOrders = new Map();
  * Cấu hình MoMo Sandbox v2 (từ biến môi trường hoặc thông số Sandbox tiêu chuẩn của MoMo)
  */
 function getMomoConfig() {
+  const partnerCode = process.env.MOMO_PARTNER_CODE;
+  const accessKey = process.env.MOMO_ACCESS_KEY;
+  const secretKey = process.env.MOMO_SECRET_KEY;
+
+  if (!partnerCode || !accessKey || !secretKey) {
+    throw new Error('Cấu hình MoMo không hợp lệ: Thiếu MOMO_PARTNER_CODE, MOMO_ACCESS_KEY hoặc MOMO_SECRET_KEY trong .env');
+  }
+
   return {
-    partnerCode: process.env.MOMO_PARTNER_CODE || 'MOMO',
-    accessKey: process.env.MOMO_ACCESS_KEY || 'F8BBA842ECF85',
-    secretKey: process.env.MOMO_SECRET_KEY || 'K951B6PE1waDMi640xX08PD3vg6EkVlz',
+    partnerCode,
+    accessKey,
+    secretKey,
     endpoint: process.env.MOMO_ENDPOINT || 'https://test-payment.momo.vn/v2/gateway/api/create',
     redirectUrl: process.env.MOMO_REDIRECT_URL || 'http://localhost:5173',
     ipnUrl: process.env.MOMO_IPN_URL || 'http://localhost:5050/api/payments/momo/ipn',
@@ -209,6 +217,14 @@ async function finalizeBookingTransaction({
  */
 async function processPayment(req, res, next) {
   try {
+    // STT 08: Cổng thanh toán mô phỏng trực tiếp chỉ bật khi ENABLE_MOCK_PAYMENT === 'true'
+    if (process.env.ENABLE_MOCK_PAYMENT !== 'true') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cổng thanh toán mô phỏng trực tiếp (/api/payments/process) đã bị tắt. Chỉ cho phép kích hoạt khi biến môi trường ENABLE_MOCK_PAYMENT=true.',
+      });
+    }
+
     const { booking_id, payment_method = 'banking', simulate_failure = false } = req.body;
 
     if (!booking_id) {
@@ -669,6 +685,12 @@ async function handleMomoIpn(req, res) {
       signature,
     } = req.body;
 
+    // STT 05: Bắt buộc phải có chữ ký điện tử
+    if (!signature) {
+      console.warn('[MoMo IPN] Yêu cầu IPN thiếu chữ ký điện tử signature!');
+      return res.status(400).json({ message: 'Missing signature' });
+    }
+
     const config = getMomoConfig();
     const rawSignature =
       `accessKey=${config.accessKey}` +
@@ -686,7 +708,7 @@ async function handleMomoIpn(req, res) {
       `&transId=${transId}`;
 
     const expectedSignature = signHmacSha256(rawSignature, config.secretKey);
-    if (signature && signature !== expectedSignature) {
+    if (signature !== expectedSignature) {
       console.warn('[MoMo IPN] Chữ ký HMAC-SHA256 không khớp!');
       return res.status(400).json({ message: 'Invalid signature' });
     }
@@ -706,6 +728,17 @@ async function handleMomoIpn(req, res) {
     }
 
     if (bookingId) {
+      // STT 07: Đối chiếu số tiền IPN nhận được với bookings.total_amount
+      const bookingRows = await db.query(`SELECT id, total_amount FROM bookings WHERE id = ?`, [bookingId]);
+      const booking = Array.isArray(bookingRows) ? bookingRows[0] : bookingRows;
+      if (!booking) {
+        return res.status(404).json({ message: 'Booking not found' });
+      }
+      if (Math.round(Number(amount)) !== Math.round(Number(booking.total_amount))) {
+        console.warn(`[MoMo IPN] Số tiền không khớp! Nhận: ${amount}, Yêu cầu: ${booking.total_amount}`);
+        return res.status(400).json({ message: 'Payment amount mismatch' });
+      }
+
       const isFailed = Number(resultCode) !== 0;
       await finalizeBookingTransaction({
         bookingId,
@@ -749,7 +782,7 @@ async function verifyMomoReturn(req, res, next) {
     const config = getMomoConfig();
     let signatureVerified = false;
 
-    // Kiểm tra chữ ký HMAC-SHA256 nếu đầy đủ tham số Return URL từ MoMo
+    // Kiểm tra chữ ký HMAC-SHA256 nếu có tham số Return URL từ MoMo
     if (signature && orderId && requestId && transId !== undefined && responseTime !== undefined) {
       const rawSignature =
         `accessKey=${config.accessKey}` +
@@ -768,6 +801,14 @@ async function verifyMomoReturn(req, res, next) {
 
       const expectedSignature = signHmacSha256(rawSignature, config.secretKey);
       signatureVerified = expectedSignature === signature;
+    }
+
+    // STT 06: Nếu gửi kèm chữ ký nhưng chữ ký không hợp lệ, từ chối giao dịch
+    if (signature && !signatureVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Chữ ký điện tử MoMo Return URL không hợp lệ! Giao dịch bị từ chối.',
+      });
     }
 
     const session = pendingMomoOrders.get(orderId);
@@ -802,6 +843,19 @@ async function verifyMomoReturn(req, res, next) {
       return res.status(400).json({
         success: false,
         message: 'Không xác định được đơn đặt vé từ giao dịch MoMo.',
+      });
+    }
+
+    // STT 07: Đối chiếu số tiền với bookings.total_amount
+    const bookingRows = await db.query(`SELECT id, total_amount FROM bookings WHERE id = ?`, [targetBookingId]);
+    const booking = Array.isArray(bookingRows) ? bookingRows[0] : bookingRows;
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn đặt vé.' });
+    }
+    if (amount !== undefined && Math.round(Number(amount)) !== Math.round(Number(booking.total_amount))) {
+      return res.status(400).json({
+        success: false,
+        message: `Số tiền thanh toán MoMo (${amount}) không khớp với tổng tiền đơn đặt vé (${booking.total_amount}).`,
       });
     }
 

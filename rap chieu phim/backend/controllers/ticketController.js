@@ -124,7 +124,20 @@ async function getTicketById(req, res, next) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy vé xem phim.' });
     }
 
-    return res.status(200).json({ success: true, data: tickets[0] });
+    const ticket = tickets[0];
+
+    // STT 10: Chống lỗ hổng IDOR - Customer chỉ được xem vé của chính mình
+    if (req.user?.role === 'customer') {
+      const currentCustomerId = req.user.customerId || req.user.id;
+      if (Number(ticket.customer_id) !== Number(currentCustomerId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Bạn không có quyền truy cập vào thông tin vé xem phim này.',
+        });
+      }
+    }
+
+    return res.status(200).json({ success: true, data: ticket });
   } catch (error) {
     next(error);
   }

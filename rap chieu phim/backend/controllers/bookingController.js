@@ -271,6 +271,17 @@ async function getBookingById(req, res, next) {
 
     const booking = bookings[0];
 
+    // STT 10: Chống lỗ hổng IDOR - Customer chỉ được xem đơn đặt vé của chính mình
+    if (req.user?.role === 'customer') {
+      const currentCustomerId = req.user.customerId || req.user.id;
+      if (Number(booking.customer_id) !== Number(currentCustomerId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Bạn không có quyền truy cập vào thông tin đơn đặt vé này.',
+        });
+      }
+    }
+
     // Lấy danh sách ghế
     const seats = await db.query(
       `SELECT bs.*, s.row_number, s.seat_number, s.seat_type

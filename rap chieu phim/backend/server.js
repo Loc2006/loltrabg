@@ -8,13 +8,44 @@ const { startHoldSeatCleanupService } = require('./services/holdSeatCleanupServi
 // Tải biến môi trường
 dotenv.config();
 
+// STT 09: Kiểm tra các biến môi trường thiết yếu khi khởi động, không dùng fallback bí mật viết cứng
+const REQUIRED_ENV_VARS = ['JWT_SECRET', 'MOMO_PARTNER_CODE', 'MOMO_ACCESS_KEY', 'MOMO_SECRET_KEY'];
+const missingVars = REQUIRED_ENV_VARS.filter((v) => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`[CRITICAL CONFIG ERROR] Thiếu các biến môi trường bắt buộc: ${missingVars.join(', ')}`);
+  console.error('Hệ thống từ chối khởi động với secret mặc định. Vui lòng cấu hình file .env.');
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middlewares
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// STT 25: Giới hạn CORS theo origin frontend và domain deploy
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  process.env.FRONTEND_URL,
+  process.env.DEPLOY_DOMAIN,
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Cho phép requests không có origin (mobile apps, server-to-server, curl, tests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS policy: Nguồn truy cập ${origin} không được phép.`));
+    },
+    credentials: true,
+  })
+);
+
+// STT 25: Hạ body payload limit xuống 5mb
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Request Logger (Development)
 if (process.env.NODE_ENV !== 'production') {
