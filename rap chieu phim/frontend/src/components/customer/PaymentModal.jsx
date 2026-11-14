@@ -112,6 +112,12 @@ export function PaymentModal({
       setVoucherError('Mã giảm giá không tồn tại hoặc đã hết hạn.');
       return;
     }
+    if (found.minOrder && subtotal < found.minOrder) {
+      setVoucherError(
+        `Đơn hàng tối thiểu ${Number(found.minOrder).toLocaleString('vi-VN')}đ để áp dụng mã ${found.code}.`
+      );
+      return;
+    }
     setAppliedVoucher(found);
     setVoucherInput(found.code);
   };
@@ -306,6 +312,13 @@ export function PaymentModal({
             </span>
           </div>
 
+          {errorMsg && (
+            <div className="p-3 rounded-2xl bg-rose-950/80 border border-rose-500/60 text-rose-200 text-xs font-semibold flex items-center gap-2.5 animate-fade-in">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {/* Payment Methods Selection */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
@@ -434,8 +447,9 @@ export function PaymentModal({
                         type="button"
                         onClick={() => copyToClipboard('8813341949', 'acc')}
                         className="text-blue-600 hover:text-blue-800"
+                        title="Sao chép số tài khoản"
                       >
-                        <Copy className="w-3 h-3" />
+                        {copied === 'acc' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                       </button>
                     </div>
                   </div>
@@ -451,8 +465,9 @@ export function PaymentModal({
                         type="button"
                         onClick={() => copyToClipboard(activeBooking.bookingCode, 'msg')}
                         className="text-amber-700 hover:text-amber-900"
+                        title="Sao chép nội dung chuyển khoản"
                       >
-                        <Copy className="w-3 h-3" />
+                        {copied === 'msg' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                       </button>
                     </div>
                   </div>

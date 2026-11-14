@@ -124,7 +124,18 @@ async function getTicketById(req, res, next) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy vé xem phim.' });
     }
 
-    return res.status(200).json({ success: true, data: tickets[0] });
+    const ticket = tickets[0];
+    const customerId = req.user.customerId || req.user.id;
+    if (
+      req.user.role === 'customer' &&
+      ticket.customer_id &&
+      ticket.customer_id !== customerId &&
+      ticket.customer_id !== req.user.id
+    ) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xem vé này.' });
+    }
+
+    return res.status(200).json({ success: true, data: ticket });
   } catch (error) {
     next(error);
   }
@@ -230,7 +241,7 @@ async function cancelTicket(req, res, next) {
   try {
     const { id } = req.params;
     const userRole = req.user.role;
-    const customerId = req.user.customerId;
+    const customerId = req.user.customerId || req.user.id;
 
     const tickets = await db.query(
       `SELECT t.*, s.start_time, b.id AS booking_id
@@ -249,7 +260,7 @@ async function cancelTicket(req, res, next) {
 
     // Nếu là customer, kiểm tra quyền sở hữu và thời gian hủy
     if (userRole === 'customer') {
-      if (ticket.customer_id !== customerId) {
+      if (ticket.customer_id !== customerId && ticket.customer_id !== req.user.id) {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền hủy vé này.' });
       }
 

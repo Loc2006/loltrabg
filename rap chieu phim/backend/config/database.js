@@ -454,6 +454,15 @@ async function query(sql, params = []) {
       list = list.filter((s) => s.status !== 'cancelled');
     }
 
+    if (normalized.includes('where s.movie_id = ?') && normalized.includes("s.status in ('scheduled', 'screening')")) {
+      const mId = parseInt(params[0], 10);
+      return list.filter((s) => s.movie_id === mId && ['scheduled', 'screening'].includes(s.status));
+    }
+
+    if (normalized.includes("where s.status = 'scheduled'")) {
+      return list.filter((s) => s.status === 'scheduled');
+    }
+
     // In scheduleController, clauses are appended in order: date -> movie_id -> room_id -> status
     let pIdx = 0;
     if (normalized.includes('and date(s.start_time) = ?')) {
@@ -559,6 +568,14 @@ async function query(sql, params = []) {
       });
     }
 
+    if (normalized.includes("where status = 'holding' and hold_expire < now()")) {
+      return memory.booking_seats.filter((bs) => {
+        if (bs.status !== 'holding') return false;
+        const exp = new Date(String(bs.hold_expire).replace(' ', 'T'));
+        return exp < now;
+      });
+    }
+
     return memory.booking_seats.map((bs) => {
       const st = memory.seats.find((s) => s.id === bs.seat_id);
       return {
@@ -579,6 +596,14 @@ async function query(sql, params = []) {
       const m = memory.movies.find((item) => item.id === s?.movie_id);
       const r = memory.rooms.find((item) => item.id === s?.room_id);
       const c = memory.customers.find((item) => item.id === b.customer_id) || memory.users.find((u) => u.id === b.customer_id);
+      const bSeats = memory.booking_seats.filter((bs) => bs.booking_id === b.id);
+      const seatLabels = bSeats
+        .map((bs) => {
+          const st = memory.seats.find((seat) => seat.id === bs.seat_id);
+          return st ? `${st.row_number}${st.seat_number}` : '';
+        })
+        .filter(Boolean)
+        .join(', ');
       return {
         ...b,
         movie_id: s?.movie_id,
@@ -595,6 +620,8 @@ async function query(sql, params = []) {
         customer_name: c?.name || c?.username || 'Khách Hàng',
         customer_email: c?.email || 'customer@nightmovie.vn',
         customer_phone: c?.phone || '0901234567',
+        seat_count: bSeats.length,
+        seat_labels: seatLabels,
       };
     });
 
@@ -632,6 +659,7 @@ async function query(sql, params = []) {
 
       return {
         ...t,
+        movie_id: s?.movie_id,
         movie_name: m?.name || 'Phim Night Movie',
         movie_poster: m?.poster || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800',
         duration: m?.duration || 120,
@@ -648,11 +676,12 @@ async function query(sql, params = []) {
         customer_email: c?.email || 'customer@nightmovie.vn',
         customer_phone: c?.phone || '0901234567',
         booking_code: b?.booking_code || 'BK-DEMO',
+        booking_status: b?.status || 'paid',
         total_amount: b?.total_amount || 100000,
       };
     });
 
-    if (normalized.includes('s.movie_id = ?')) {
+    if (normalized.includes('s.movie_id = ?') && normalized.includes('b.customer_id = ?')) {
       const movieId = parseInt(params[0], 10);
       const custId = parseInt(params[1], 10);
       const custId2 = params[3] ? parseInt(params[3], 10) : custId;
@@ -670,6 +699,11 @@ async function query(sql, params = []) {
       });
     }
 
+    if (normalized.includes('where t.id = ? or t.ticket_code = ?')) {
+      const tId = parseInt(params[0], 10);
+      const code = String(params[1] ?? params[0]);
+      return list.filter((t) => t.id === tId || t.ticket_code === code);
+    }
     if (normalized.includes('where t.id = ?') || normalized.includes('where id = ?')) {
       const tId = parseInt(params[0], 10);
       return list.filter((t) => t.id === tId);
@@ -688,6 +722,14 @@ async function query(sql, params = []) {
     }
 
     let pIdx = 0;
+    if (normalized.includes('and s.movie_id = ?')) {
+      const mId = parseInt(params[pIdx++], 10);
+      list = list.filter((t) => t.movie_id === mId);
+    }
+    if (normalized.includes('and date(s.start_time) = ?')) {
+      const dStr = String(params[pIdx++] || '');
+      list = list.filter((t) => String(t.start_time || '').slice(0, 10) === dStr);
+    }
     if (normalized.includes('and t.status = ?')) {
       const st = params[pIdx++];
       list = list.filter((t) => t.status === st);
@@ -702,7 +744,8 @@ async function query(sql, params = []) {
         (t) =>
           (t.ticket_code || '').toLowerCase().includes(s) ||
           (t.customer_name || '').toLowerCase().includes(s) ||
-          (t.customer_phone || '').toLowerCase().includes(s)
+          (t.customer_phone || '').toLowerCase().includes(s) ||
+          (t.booking_code || '').toLowerCase().includes(s)
       );
     }
 
@@ -711,7 +754,12 @@ async function query(sql, params = []) {
 
   // 8.1 Payments
   if (normalized.includes('from payments')) {
-    return memory.payments || [];
+    const allPayments = memory.payments || [];
+    if (normalized.includes('where booking_id = ?') || normalized.includes('where p.booking_id = ?')) {
+      const bId = parseInt(params[0], 10);
+      return allPayments.filter((p) => p.booking_id === bId);
+    }
+    return allPayments;
   }
 
   // =========================================================================
@@ -731,6 +779,11 @@ async function query(sql, params = []) {
         room_type: r?.room_type,
       };
     });
+
+    if (normalized.includes('where e.id = ?') || normalized.includes('where id = ?')) {
+      const id = parseInt(params[0], 10);
+      return list.filter((e) => e.id === id);
+    }
 
     // Check faulty equipment in a specific room (scheduleController.createSchedule)
     if (normalized.includes('where e.room_id = ?') && normalized.includes("e.status in ('broken', 'repairing')")) {
@@ -864,10 +917,33 @@ async function query(sql, params = []) {
       };
     });
 
-    if (normalized.includes('where id = ?')) {
+    if (normalized.includes('where id = ?') || normalized.includes('where m.id = ?')) {
       const id = parseInt(params[0], 10);
       return list.filter((m) => m.id === id);
     }
+    if (normalized.includes('where m.equipment_id = ?') || normalized.includes('where equipment_id = ?')) {
+      const eqId = parseInt(params[0], 10);
+      return list.filter((m) => m.equipment_id === eqId);
+    }
+
+    let pIdx = 0;
+    if (normalized.includes('and m.type = ?')) {
+      const tp = params[pIdx++];
+      list = list.filter((m) => m.type === tp);
+    }
+    if (normalized.includes('and m.status = ?')) {
+      const st = params[pIdx++];
+      list = list.filter((m) => m.status === st);
+    }
+    if (normalized.includes('and m.equipment_id = ?')) {
+      const eqId = parseInt(params[pIdx++], 10);
+      list = list.filter((m) => m.equipment_id === eqId);
+    }
+    if (normalized.includes('and m.employee_id = ?')) {
+      const empId = parseInt(params[pIdx++], 10);
+      list = list.filter((m) => m.employee_id === empId);
+    }
+
     return list;
   }
 
@@ -881,6 +957,7 @@ async function query(sql, params = []) {
       return {
         ...ws,
         employee_name: emp?.name,
+        employee_position: emp?.position,
         position: ws.position || emp?.position,
         department: emp?.department,
         room_name: r?.name,
@@ -896,6 +973,14 @@ async function query(sql, params = []) {
     if (normalized.includes('and ws.employee_id = ?')) {
       const eId = parseInt(params[pIdx++], 10);
       list = list.filter((ws) => ws.employee_id === eId);
+    }
+    if (normalized.includes('and ws.room_id = ?')) {
+      const rId = parseInt(params[pIdx++], 10);
+      list = list.filter((ws) => ws.room_id === rId);
+    }
+    if (normalized.includes('and ws.shift_name = ?')) {
+      const sName = params[pIdx++];
+      list = list.filter((ws) => ws.shift_name === sName);
     }
     return list;
   }
@@ -915,9 +1000,22 @@ async function query(sql, params = []) {
         position: emp?.position,
       };
     });
-    if (normalized.includes('where ri.id = ?') || normalized.includes('where id = ?')) {
+    if (normalized.includes('where ri.id = ?') || normalized.includes('where i.id = ?') || normalized.includes('where id = ?')) {
       const id = parseInt(params[0], 10);
       return list.filter((i) => i.id === id);
+    }
+    if (normalized.includes('where i.room_id = ?') || normalized.includes('where room_id = ?')) {
+      const rId = parseInt(params[0], 10);
+      return list.filter((i) => i.room_id === rId);
+    }
+    let pIdx = 0;
+    if (normalized.includes('and i.room_id = ?')) {
+      const rId = parseInt(params[pIdx++], 10);
+      list = list.filter((i) => i.room_id === rId);
+    }
+    if (normalized.includes('and i.status = ?')) {
+      const st = params[pIdx++];
+      list = list.filter((i) => i.status === st);
     }
     return list;
   }
@@ -949,8 +1047,16 @@ async function query(sql, params = []) {
       };
     });
 
-    if (normalized.includes("where r.name = 'technician'")) {
-      return list.filter((e) => e.role_name === 'technician');
+    if (normalized.includes('where e.id = ?') || normalized.includes('where id = ?')) {
+      const id = parseInt(params[0], 10);
+      return list.filter((e) => e.id === id);
+    }
+
+    if (
+      normalized.includes("where r.name = 'technician'") ||
+      normalized.includes("where r.name in ('technician', 'manager', 'admin')")
+    ) {
+      return list.filter((e) => ['technician', 'manager', 'admin'].includes(e.role_name) && e.status === 'active');
     }
 
     let pIdx = 0;
@@ -1019,7 +1125,18 @@ async function query(sql, params = []) {
   // 16. NOTIFICATIONS & OTHER MODULES
   // =========================================================================
   if (normalized.includes('from notifications')) {
-    return memory.notifications;
+    let list = memory.notifications || [];
+    if (normalized.includes('where user_id = ?')) {
+      const uId = parseInt(params[0], 10);
+      list = list.filter((n) => n.user_id === uId || !n.user_id);
+    }
+    if (normalized.includes('is_read = false')) {
+      list = list.filter((n) => !n.is_read);
+    }
+    if (normalized.includes('count(*) as count')) {
+      return [{ count: list.length }];
+    }
+    return list;
   }
   if (normalized.includes('from concession_items')) {
     if (normalized.includes('where id in (?)')) {
@@ -1394,13 +1511,25 @@ async function query(sql, params = []) {
     if (eq) {
       if (normalized.includes("set status = 'broken'")) {
         eq.status = 'broken';
+      } else if (normalized.includes("status = 'good'") && normalized.includes('last_maintenance = curdate()')) {
+        eq.status = 'good';
+        eq.last_maintenance = todayStr;
+        if (normalized.includes('next_maintenance = ?') && params[0]) {
+          eq.next_maintenance = params[0];
+        }
       } else if (normalized.includes("set status = 'good'")) {
         eq.status = 'good';
-        if (normalized.includes('last_maintenance = curdate()')) {
-          eq.last_maintenance = todayStr;
-        }
+      } else if (normalized.includes('set status = ? where id = ?')) {
+        if (params[0] !== undefined && params[0] !== null) eq.status = params[0];
+      } else if (normalized.includes('name = coalesce(?, name)')) {
+        // equipmentController.updateEquipment: [name, room_id, status, last_maintenance, next_maintenance, manufacturer, id]
+        if (params[0] !== undefined && params[0] !== null) eq.name = params[0];
+        if (params[1] !== undefined && params[1] !== null) eq.room_id = parseInt(params[1], 10);
+        if (params[2] !== undefined && params[2] !== null) eq.status = params[2];
+        if (params[3] !== undefined && params[3] !== null) eq.last_maintenance = params[3];
+        if (params[4] !== undefined && params[4] !== null) eq.next_maintenance = params[4];
+        if (params[5] !== undefined && params[5] !== null) eq.manufacturer = params[5];
       } else {
-        // SQL: SET status = COALESCE(?, status), last_maintenance = COALESCE(?, last_maintenance), next_maintenance = COALESCE(?, next_maintenance) WHERE id = ?
         if (params[0] !== undefined && params[0] !== null) eq.status = params[0];
         if (params[1] !== undefined && params[1] !== null) eq.last_maintenance = params[1];
         if (params[2] !== undefined && params[2] !== null) eq.next_maintenance = params[2];
@@ -1481,12 +1610,16 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update assignments')) {
-    const incId = parseInt(params[params.length - 1], 10);
-    const assign = memory.assignments.find((a) => a.incident_id === incId);
+    const targetId = parseInt(params[params.length - 1], 10);
+    const assign = normalized.includes('where maintenance_id = ?')
+      ? memory.assignments.find((a) => a.maintenance_id === targetId)
+      : memory.assignments.find((a) => a.incident_id === targetId);
     if (assign) {
       if (normalized.includes('set employee_id = ?')) {
         assign.employee_id = parseInt(params[0], 10);
         assign.status = 'assigned';
+      } else if (normalized.includes("status = 'completed'")) {
+        assign.status = 'completed';
       } else if (params[0] !== undefined) {
         assign.status = params[0];
       }
@@ -1768,8 +1901,9 @@ async function query(sql, params = []) {
 
   if (normalized.startsWith('delete from kdm_licenses')) {
     const id = parseInt(params[0], 10);
+    const initialLen = memory.kdm_licenses.length;
     memory.kdm_licenses = memory.kdm_licenses.filter((k) => k.id !== id);
-    return { affectedRows: 1 };
+    return { affectedRows: initialLen - memory.kdm_licenses.length };
   }
 
   // I. Projector Lamp Logs Mutations
@@ -1825,6 +1959,18 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update bookings')) {
+    if (normalized.includes('where id in (?)')) {
+      const ids = (Array.isArray(params[0]) ? params[0] : [params[0]]).map((x) => parseInt(x, 10));
+      let count = 0;
+      memory.bookings.forEach((b) => {
+        if (ids.includes(b.id) && (!normalized.includes("status = 'pending'") || b.status === 'pending')) {
+          if (normalized.includes("status = 'expired'")) b.status = 'expired';
+          else if (normalized.includes("status = 'cancelled'")) b.status = 'cancelled';
+          count++;
+        }
+      });
+      return { affectedRows: count };
+    }
     if (normalized.includes('set status = ? where id = ?')) {
       const status = params[0];
       const id = parseInt(params[1], 10);
@@ -1865,6 +2011,17 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update booking_seats')) {
+    if (normalized.includes('where id in (?)')) {
+      const ids = (Array.isArray(params[0]) ? params[0] : [params[0]]).map((x) => parseInt(x, 10));
+      let count = 0;
+      memory.booking_seats.forEach((bs) => {
+        if (ids.includes(bs.id)) {
+          if (normalized.includes("status = 'released'")) bs.status = 'released';
+          count++;
+        }
+      });
+      return { affectedRows: count };
+    }
     // Release single seat on ticket cancel: WHERE booking_id = ? AND seat_id = ?
     if (normalized.includes('where booking_id = ? and seat_id = ?')) {
       const bookingId = parseInt(params[0], 10);
@@ -1949,9 +2106,23 @@ async function query(sql, params = []) {
   // O. Notifications Mutations
   if (normalized.startsWith('insert into notifications')) {
     const newId = memory.notifications.length > 0 ? Math.max(...memory.notifications.map((n) => n.id)) + 1 : 1;
+    if (normalized.includes('select u.id')) {
+      // INSERT INTO notifications (user_id, title, message, type) SELECT u.id, ?, ?, 'incident' FROM users u ...
+      const newNotif = {
+        id: newId,
+        user_id: 1,
+        title: params[0],
+        message: params[1],
+        type: 'incident',
+        is_read: false,
+        created_at: now.toISOString().replace('T', ' ').slice(0, 19),
+      };
+      memory.notifications.unshift(newNotif);
+      return { insertId: newId, affectedRows: 1 };
+    }
     const newNotif = {
       id: newId,
-      user_id: parseInt(params[0], 10),
+      user_id: parseInt(params[0], 10) || 1,
       title: params[1],
       message: params[2],
       type: params[3] || 'general',
@@ -1963,6 +2134,17 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update notifications')) {
+    if (normalized.includes('where user_id = ?') && !normalized.includes('where id = ?')) {
+      const uId = parseInt(params[0], 10);
+      let count = 0;
+      memory.notifications.forEach((n) => {
+        if (n.user_id === uId || !n.user_id) {
+          n.is_read = true;
+          count++;
+        }
+      });
+      return { affectedRows: count };
+    }
     const id = parseInt(params[0], 10);
     const notif = memory.notifications.find((n) => n.id === id);
     if (notif) notif.is_read = true;
@@ -1988,9 +2170,15 @@ async function query(sql, params = []) {
  */
 async function withTransaction(callback) {
   if (isConnected) {
+    let connection = null;
     try {
       const p = getPool();
-      const connection = await p.getConnection();
+      connection = await p.getConnection();
+    } catch (connErr) {
+      console.warn(`[MySQL Transaction Fallback] ${connErr.message}.`);
+    }
+
+    if (connection) {
       try {
         await connection.beginTransaction();
         const result = await callback(connection);
@@ -2002,8 +2190,6 @@ async function withTransaction(callback) {
       } finally {
         connection.release();
       }
-    } catch (err) {
-      console.warn(`[MySQL Transaction Fallback] ${err.message}.`);
     }
   }
 

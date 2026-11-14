@@ -160,7 +160,7 @@ async function updateMovie(req, res, next) {
       status,
     } = req.body;
 
-    await db.query(
+    const result = await db.query(
       `UPDATE movies SET 
         name = COALESCE(?, name),
         genre = COALESCE(?, genre),
@@ -196,6 +196,13 @@ async function updateMovie(req, res, next) {
       ]
     );
 
+    if (result && result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy phim cần cập nhật.',
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Cập nhật thông tin phim thành công!',
@@ -225,7 +232,13 @@ async function deleteMovie(req, res, next) {
       });
     }
 
-    await db.query(`DELETE FROM movies WHERE id = ?`, [id]);
+    const result = await db.query(`DELETE FROM movies WHERE id = ?`, [id]);
+    if (result && result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy phim cần xóa.',
+      });
+    }
 
     return res.status(200).json({
       success: true,
