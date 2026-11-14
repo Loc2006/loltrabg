@@ -41,7 +41,7 @@ const CINEMATIC_TECHNOLOGIES = [
     glowGradient: 'from-amber-500/20 to-transparent',
     btnGradient: 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-bold shadow-lg shadow-amber-500/20',
     features: ['IMAX 4K Dual Laser', 'Màn Hình Cong 22m', 'Tỷ Lệ 1.43:1', 'Độ Tương Phản Vô Cực'],
-    roomName: 'Cinema Hall 1 (IMAX Laser)',
+    roomName: 'Cinema Hall 4 (IMAX Laser Theater)',
     specs: [
       { label: 'Hệ thống máy chiếu', value: 'Dual 4K Commercial Laser kép' },
       { label: 'Kích thước màn ảnh', value: '22m (ngang) x 16m (cao) - Cong 70°' },
@@ -64,7 +64,7 @@ const CINEMATIC_TECHNOLOGIES = [
     glowGradient: 'from-ruby-500/20 to-transparent',
     btnGradient: 'bg-gradient-to-r from-ruby-600 via-rose-600 to-ruby-600 hover:from-ruby-500 hover:to-rose-500 text-white font-bold shadow-lg shadow-ruby-500/25',
     features: ['Motion Seats Đa Chiều', 'Gió Bão & Sương Mù', 'Mưa Tuyết & Chớp Sáng', 'Mùi Hương Môi Trường'],
-    roomName: 'Cinema Hall 4 (4DX Motion World)',
+    roomName: 'Cinema Hall 5 (4DX Motion World)',
     specs: [
       { label: 'Cơ cấu chuyển động', value: 'Servo đa trục mô phỏng Heave, Pitch, Roll' },
       { label: 'Số lượng hiệu ứng', value: '21 hiệu ứng vật lý & thời tiết môi trường' },
