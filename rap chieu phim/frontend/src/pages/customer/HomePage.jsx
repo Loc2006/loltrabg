@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { api } from '../../services/api';
 import {
   Play,
@@ -15,85 +14,118 @@ import {
   Volume2,
   Sparkles,
   Maximize2,
-  Wind,
   Layers,
   CheckCircle2,
   X,
   ArrowRight,
   Tv,
+  MapPin,
+  Info,
 } from 'lucide-react';
 import { cinemaSound } from '../../services/cinemaSound';
 import { TrailerModal } from '../../components/customer/TrailerModal';
 import { MovieDetailModal } from '../../components/customer/MovieDetailModal';
+import { ModalPortal } from '../../components/common/ModalPortal';
 
 const CINEMATIC_TECHNOLOGIES = [
   {
     id: 'imax',
     title: 'IMAX Laser 4K',
-    category: 'Màn Ảnh Cỡ Lớn',
+    shortName: 'IMAX',
+    category: 'Hình Ảnh & Âm Thanh Cao Cấp',
     shortCode: 'IMAX',
-    tagline: 'Chuẩn mực hình ảnh điện ảnh thế hệ mới',
-    description: 'Màn hình cong khổng lồ 22m x 16m kết hợp hệ thống máy chiếu Dual-Laser kép, mang lại độ tương phản vô cực và hình ảnh sắc nét vượt trội.',
+    tagline: 'Màn Ảnh Cực Đại • Chuẩn Mực Điện Ảnh Toàn Cầu',
+    description: 'Công nghệ màn chiếu cong cực đại 22m x 16m kết hợp hệ thống máy chiếu Dual Laser 4K thương mại và âm thanh vòm 12 kênh độc lập, mang lại độ tương phản vô cực và hình ảnh sắc nét vượt bậc.',
     image: '/images/imax.jpg',
     fallbackImage: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=1200',
+    icon: Maximize2,
     badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
     iconStyle: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     borderHover: 'hover:border-amber-500/80 hover:shadow-[0_15px_35px_rgba(245,158,11,0.22)]',
     glowGradient: 'from-amber-500/20 to-transparent',
     btnGradient: 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-bold shadow-lg shadow-amber-500/20',
-    features: ['IMAX 4K Dual Laser', 'Màn Hình Cong 22m', 'Tỷ Lệ 1.43:1', 'Độ Tương Phản Vô Cực'],
-    roomName: 'Cinema Hall 4 (IMAX Laser Theater)',
+    features: ['IMAX 4K Dual Laser', 'Màn Ảnh Cong 22m', 'Âm Thanh 12-Channel', 'Tỷ Lệ 1.43:1 Chuẩn'],
+    defaultRoom: 'Cinema Hall 4 (IMAX Laser Theater)',
     specs: [
-      { label: 'Hệ thống máy chiếu', value: 'Dual 4K Commercial Laser kép' },
-      { label: 'Kích thước màn ảnh', value: '22m (ngang) x 16m (cao) - Cong 70°' },
-      { label: 'Độ sáng tiêu chuẩn', value: 'Vượt trội 60% so với bóng Xenon' },
-      { label: 'Hệ thống âm thanh', value: 'IMAX 12-Channel Immersive Sound' },
-    ],
-  },
-  {
-    id: '4dx',
-    title: '4DX Motion World',
-    category: 'Điện Ảnh Đa Giác Quan',
-    shortCode: '4DX',
-    tagline: 'Nhập vai 5 giác quan cùng 21 hiệu ứng thời tiết',
-    description: 'Ghế chuyển động đa chiều 3 bậc tự do đồng bộ nhịp phim, hòa cùng hiệu ứng gió bão, sương mù, mưa tuyết và mùi hương môi trường sống động.',
-    image: '/images/4dx.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1574267432553-4b4628081c31?q=80&w=1200',
-    badgeStyle: 'bg-ruby-500/20 text-ruby-300 border-ruby-500/40',
-    iconStyle: 'bg-ruby-500/20 text-ruby-400 border-ruby-500/30',
-    borderHover: 'hover:border-ruby-500/80 hover:shadow-[0_15px_35px_rgba(225,29,72,0.25)]',
-    glowGradient: 'from-ruby-500/20 to-transparent',
-    btnGradient: 'bg-gradient-to-r from-ruby-600 via-rose-600 to-ruby-600 hover:from-ruby-500 hover:to-rose-500 text-white font-bold shadow-lg shadow-ruby-500/25',
-    features: ['Motion Seats Đa Chiều', 'Gió Bão & Sương Mù', 'Mưa Tuyết & Chớp Sáng', 'Mùi Hương Môi Trường'],
-    roomName: 'Cinema Hall 5 (4DX Motion World)',
-    specs: [
-      { label: 'Cơ cấu chuyển động', value: 'Servo đa trục mô phỏng Heave, Pitch, Roll' },
-      { label: 'Số lượng hiệu ứng', value: '21 hiệu ứng vật lý & thời tiết môi trường' },
-      { label: 'Công nghệ bảo vệ', value: 'Thuật toán AI cân bằng rung lắc chống say' },
-      { label: 'Hiệu ứng mùi hương', value: '7 mùi tự nhiên: biển, rừng thông, thuốc súng...' },
+      { label: 'Hệ thống máy chiếu', value: 'Dual 4K Commercial Laser kép siêu sáng' },
+      { label: 'Kích thước màn ảnh', value: '22m (ngang) x 16m (cao) - Cong 70° tối ưu thị giác' },
+      { label: 'Độ tương phản hình ảnh', value: 'Laser vô cực, chống chói & tái tạo đen sâu tuyệt đối' },
+      { label: 'Hệ thống âm thanh', value: 'IMAX 12-Channel Immersive Sound trường độ cao' },
     ],
   },
   {
     id: 'dolby',
     title: 'Dolby Atmos 7.1',
-    category: 'Âm Thanh Vòm Không Gian',
-    shortCode: 'DOLBY',
-    tagline: 'Âm thanh 3 chiều chuyển động chân thực',
-    description: 'Hệ thống loa vòm 360 độ bao phủ từ trần nhà đến các vách tường, kiến tạo âm trường đa chiều chân thực đưa khán giả hòa mình trọn vẹn vào không gian điện ảnh.',
-    image: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=1200',
-    fallbackImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200',
+    shortName: 'Dolby Atmos',
+    category: 'Âm Thanh Đa Chiều',
+    shortCode: 'ATMOS',
+    tagline: 'Âm Trường 360° • Chuyển Động Không Gian Sống Động',
+    description: 'Hệ thống loa vòm bao phủ 360 độ từ trần nhà đến các vách tường với công nghệ định vị vật thể âm học Object-Based Audio, đưa khán giả hòa mình trọn vẹn vào từng thước phim.',
+    image: 'https://images.unsplash.com/photo-1595769816263-9b910be24d5f?q=80&w=1200',
+    fallbackImage: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=1200',
+    icon: Volume2,
     badgeStyle: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
     iconStyle: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
     borderHover: 'hover:border-cyan-500/80 hover:shadow-[0_15px_35px_rgba(6,182,212,0.22)]',
     glowGradient: 'from-cyan-500/20 to-transparent',
     btnGradient: 'bg-gradient-to-r from-cyan-600 via-blue-600 to-cyan-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold shadow-lg shadow-cyan-500/20',
-    features: ['Âm Vòm 360° Sphere', 'Loa Trần Overhead', 'Subwoofer Siêu Trầm', 'Chuẩn Dolby Cinema'],
-    roomName: 'Cinema Hall 2 (Standard Dolby Atmos)',
+    features: ['Âm Vòm 360° Sphere', 'Loa Trần Overhead', 'Subwoofer Siêu Trầm', 'Dolby Cinema Audio'],
+    defaultRoom: 'Cinema Hall 1, Hall 2, Hall 7 (Standard Dolby)',
     specs: [
-      { label: 'Bộ xử lý âm thanh', value: 'Dolby Cinema Audio Processor CP950' },
+      { label: 'Bộ xử lý âm thanh', value: 'Dolby Cinema Audio Processor CP950 DCI' },
       { label: 'Cấu hình loa vòm', value: '64 kênh âm thanh độc lập Object-Based Audio' },
-      { label: 'Hệ thống loa trần', value: '16 loa trần treo định hướng góc âm học' },
-      { label: 'Hệ thống siêu trầm', value: 'Dual Subwoofer 8000W tần số sâu 20Hz' },
+      { label: 'Hệ thống loa trần', value: '16 loa trần treo định hướng góc âm học không gian' },
+      { label: 'Hệ thống siêu trầm', value: 'Dual Subwoofer 8000W dải trầm sâu 20Hz uy lực' },
+    ],
+  },
+  {
+    id: '3d',
+    title: 'RealD 3D Digital',
+    shortName: '3D Digital',
+    category: 'Hình Ảnh Ba Chiều',
+    shortCode: '3D',
+    tagline: 'Độ Sâu Không Gian • Chiều Sâu Điện Ảnh Chân Thực',
+    description: 'Công nghệ phân cực quang học cao cấp với tần số quét 144Hz Triple-Flash loại bỏ nhòe hình, tạo cảm giác hình ảnh nổi thoát ra khỏi màn ảnh với độ sáng vượt bậc trên màn bạc rạp chiếu.',
+    image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1200',
+    fallbackImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200',
+    icon: Layers,
+    badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    iconStyle: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    borderHover: 'hover:border-purple-500/80 hover:shadow-[0_15px_35px_rgba(168,85,247,0.25)]',
+    glowGradient: 'from-purple-500/20 to-transparent',
+    btnGradient: 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg shadow-purple-500/25',
+    features: ['Kính Phân Cực RealD', 'Tần Số Quét 144Hz', 'Màn Bạc Tăng Sáng', 'Chiều Sâu Sống Động'],
+    defaultRoom: 'Cinema Hall 1, Hall 2, Hall 3, Hall 5',
+    specs: [
+      { label: 'Công nghệ 3D', value: 'RealD Circular Polarized quang học cao cấp' },
+      { label: 'Tần số quét hình ảnh', value: '144Hz Triple-Flash mượt mà, chống mỏi mắt' },
+      { label: 'Độ sáng trình chiếu', value: 'Hệ thống màn bạc tăng cường độ sáng chiếu 3D' },
+      { label: 'Kính chuyên dụng', value: 'Trọng lượng nhẹ, chống lóa và bảo vệ mắt' },
+    ],
+  },
+  {
+    id: '2d',
+    title: '2D Digital Standard',
+    shortName: '2D Digital',
+    category: 'Định Dạng Tiêu Chuẩn',
+    shortCode: '2D',
+    tagline: 'Hình Ảnh Sắc Nét • Màu Sắc Tự Nhiên & Dễ Chịu',
+    description: 'Định dạng kỹ thuật số DCI 2K/4K tiêu chuẩn quốc tế mang lại màu sắc chân thực, hình ảnh ổn định sắc nét và góc nhìn rộng, phù hợp thoải mái cho mọi lứa tuổi khán giả.',
+    image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200',
+    fallbackImage: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=1200',
+    icon: Film,
+    badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    iconStyle: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    borderHover: 'hover:border-emerald-500/80 hover:shadow-[0_15px_35px_rgba(16,185,129,0.25)]',
+    glowGradient: 'from-emerald-500/20 to-transparent',
+    btnGradient: 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg shadow-emerald-500/25',
+    features: ['DCI Standard 2K/4K', 'Màu Sắc Tự Nhiên', 'Âm Thanh Dolby 7.1', 'Phù Hợp Mọi Lứa Tuổi'],
+    defaultRoom: 'Tất cả các phòng chiếu tiêu chuẩn tại rạp',
+    specs: [
+      { label: 'Độ phân giải', value: 'DCI Compliant 2K / 4K Digital sắc nét' },
+      { label: 'Tỷ lệ khung hình', value: 'Flat 1.85:1 & Scope 2.39:1 chuẩn studio' },
+      { label: 'Âm thanh phòng chiếu', value: 'Hệ thống âm thanh vòm Dolby Surround 7.1' },
+      { label: 'Góc nhìn tối ưu', value: 'Góc nhìn rộng toàn phòng, không hạn chế vị trí ngồi' },
     ],
   },
 ];
@@ -106,6 +138,7 @@ export function HomePage({
 }) {
   const [movies, setMovies] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [activeTab, setActiveTab] = useState('now_showing'); // 'now_showing' | 'coming_soon'
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [trailerData, setTrailerData] = useState({ isOpen: false, url: '', name: '' });
@@ -120,41 +153,20 @@ export function HomePage({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [moviesRes, schedulesRes] = await Promise.all([
+      const [moviesRes, schedulesRes, roomsRes] = await Promise.all([
         api.getMovies({ limit: 16 }),
         api.getSchedules({ status: 'scheduled' }),
+        api.getRooms().catch(() => ({ success: false, data: [] })),
       ]);
       if (moviesRes.success) setMovies(moviesRes.data);
       if (schedulesRes.success) setSchedules(schedulesRes.data);
+      if (roomsRes && roomsRes.success) setRooms(roomsRes.data);
     } catch (err) {
       console.error('Lỗi tải dữ liệu trang chủ:', err);
     } finally {
       setLoading(false);
     }
   };
-
-  // Cơ chế 1: Thoát Tech Modal bằng phím tắt ESC
-  useEffect(() => {
-    if (!selectedTech) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-        setSelectedTech(null);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedTech]);
-
-  // Cơ chế 2: Khóa cuộn trang nền khi mở Tech Modal và dọn dẹp sạch khi đóng / unmount
-  useEffect(() => {
-    if (selectedTech) {
-      const prevOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prevOverflow || 'unset';
-      };
-    }
-  }, [selectedTech]);
 
   const filteredMovies = movies.filter((m) => {
     const matchTab = activeTab === 'all' || m.status === activeTab;
@@ -369,12 +381,17 @@ export function HomePage({
                       </button>
                       <button
                         type="button"
-                        onClick={() => cinemaSound.playCinemaIntroBoom()}
-                        className="px-4 py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs sm:text-sm border border-amber-500/40 backdrop-blur-md transition-all flex items-center gap-2 shrink-0"
-                        title="Nghe hiệu ứng âm thanh mở màn chuẩn rạp"
+                        onClick={() => {
+                          const section = document.getElementById('cinema-technologies-section');
+                          if (section) {
+                            section.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className="px-4 py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs sm:text-sm border border-amber-500/40 backdrop-blur-md transition-all flex items-center gap-2 shrink-0 group cursor-pointer"
+                        title="Khám phá các công nghệ phòng chiếu hiện đại tại NIGHT MOVIE"
                       >
-                        <Volume2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        Âm Thanh IMAX
+                        <Sparkles className="w-4 h-4 text-amber-400 shrink-0 group-hover:rotate-12 transition-transform" />
+                        Trải Nghiệm Công Nghệ
                       </button>
                     </div>
                   </div>
@@ -614,249 +631,356 @@ export function HomePage({
           )}
         </div>
 
-        {/* Cinematic Technology Highlights (IMAX, 4DX, Dolby) */}
-        <div className="pt-12 border-t border-cinema-700/60">
+        {/* TRẢI NGHIỆM CÔNG NGHỆ PHÒNG CHIẾU (IMAX, Dolby Atmos, 3D, 2D) */}
+        <div id="cinema-technologies-section" className="pt-12 border-t border-cinema-700/60 scroll-mt-20">
           <div className="text-center max-w-3xl mx-auto mb-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Chuẩn Mực Rạp Chiếu Hollywood
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-ruby-500/10 border border-ruby-500/30 text-ruby-400 text-xs font-bold uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-ruby-400" />
+              Tiêu Chuẩn Nghe Nhìn Điện Ảnh Quốc Tế
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-3">
-              Trải Nghiệm <span className="text-transparent bg-clip-text bg-gradient-to-r from-ruby-500 via-rose-400 to-amber-400">Điện Ảnh Đỉnh Cao</span>
+              TRẢI NGHIỆM <span className="text-transparent bg-clip-text bg-gradient-to-r from-ruby-500 via-amber-400 to-cyan-400">CÔNG NGHỆ PHÒNG CHIẾU</span>
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              Hệ thống phòng chiếu thế hệ mới tại NIGHT MOVIE tích hợp những công nghệ nghe nhìn tân tiến bậc nhất hành tinh, mang lại cảm xúc đắm chìm trọn vẹn trong từng khuôn hình.
+              Khám phá các công nghệ hình ảnh và âm thanh tiên tiến được trang bị tại hệ thống rạp NIGHT MOVIE, từ định dạng 2D tiêu chuẩn, không gian 3D sống động đến âm thanh vòm Dolby Atmos và màn ảnh cực đại IMAX Laser thế hệ mới.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {CINEMATIC_TECHNOLOGIES.map((tech) => (
-              <div
-                key={tech.id}
-                onClick={() => {
-                  cinemaSound.playTicketChime();
-                  setSelectedTech(tech);
-                }}
-                className={`group relative rounded-3xl overflow-hidden border border-cinema-700/70 bg-cinema-900/90 shadow-2xl flex flex-col justify-between min-h-[490px] sm:min-h-[520px] transition-all duration-500 hover:-translate-y-2 cursor-pointer ${tech.borderHover}`}
-              >
-                {/* Background Image with Zoom & Dark Gradients */}
-                <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-cinema-900 to-cinema-950">
-                  <img
-                    src={tech.image}
-                    alt={tech.title}
-                    onError={(e) => {
-                      if (!e.target.dataset.triedFallback && tech.fallbackImage) {
-                        e.target.dataset.triedFallback = 'true';
-                        e.target.src = tech.fallbackImage;
-                      } else {
-                        e.target.style.display = 'none';
-                      }
-                    }}
-                    className={`w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-110 filter contrast-[1.12] ${
-                      tech.id === 'imax' || tech.id === '4dx' ? 'brightness-[0.88]' : 'brightness-[0.72]'
-                    }`}
-                  />
-                  {/* Multilayer Dark Gradient for High Text Contrast */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/25" />
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-25 transition-opacity duration-500 bg-gradient-to-b ${tech.glowGradient}`} />
-                </div>
-
-                {/* Top Content: Badges */}
-                <div className="relative z-10 p-6 flex items-start justify-between gap-3">
-                  <span className={`text-[11px] font-extrabold tracking-wider uppercase px-3 py-1.5 rounded-xl border backdrop-blur-md shadow-sm ${tech.badgeStyle}`}>
-                    {tech.category}
-                  </span>
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm border shadow-lg backdrop-blur-md ${tech.iconStyle}`}>
-                    {tech.shortCode}
-                  </div>
-                </div>
-
-                {/* Bottom Content: Titles, Descriptions, Feature Badges & Action */}
-                <div className="relative z-10 p-6 sm:p-7 flex flex-col justify-end cinematic-dark-overlay">
-                  <div className="text-[11px] font-semibold text-amber-400/90 uppercase tracking-widest mb-1.5">
-                    {tech.tagline}
-                  </div>
-                  <h4 className="text-2xl font-black text-white mb-2.5 group-hover:text-amber-300 transition-colors flex items-center gap-2">
-                    {tech.title}
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-300/90 leading-relaxed mb-4 line-clamp-3">
-                    {tech.description}
-                  </p>
-
-                  {/* Feature Badges */}
-                  <div className="flex flex-wrap gap-1.5 mb-5">
-                    {tech.features.map((feat, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[10px] sm:text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-black/40 text-slate-200 border border-white/10 backdrop-blur-md shadow-sm"
-                      >
-                        {feat}
-                      </span>
-                    ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+            {CINEMATIC_TECHNOLOGIES.map((tech) => {
+              const TechIcon = tech.icon;
+              return (
+                <div
+                  key={tech.id}
+                  onClick={() => {
+                    cinemaSound.playTicketChime();
+                    setSelectedTech(tech);
+                  }}
+                  className={`group relative rounded-3xl overflow-hidden border border-cinema-700/70 bg-cinema-900/90 shadow-2xl flex flex-col justify-between min-h-[480px] sm:min-h-[500px] transition-all duration-300 hover:-translate-y-1.5 cursor-pointer ${tech.borderHover}`}
+                >
+                  {/* Background Image with Subtle Zoom & Dark Gradients */}
+                  <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-cinema-900 to-cinema-950">
+                    <img
+                      src={tech.image}
+                      alt={tech.title}
+                      onError={(e) => {
+                        if (!e.target.dataset.triedFallback && tech.fallbackImage) {
+                          e.target.dataset.triedFallback = 'true';
+                          e.target.src = tech.fallbackImage;
+                        } else {
+                          e.target.style.display = 'none';
+                        }
+                      }}
+                      className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.68] contrast-[1.08]"
+                    />
+                    {/* Multilayer Dark Gradient for High Text Contrast */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/85 to-slate-950/30" />
+                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 bg-gradient-to-b ${tech.glowGradient}`} />
                   </div>
 
-                  {/* Action Button */}
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                    <button
-                      type="button"
-                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${tech.btnGradient}`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Khám phá công nghệ</span>
-                    </button>
-                    <span className="text-[11px] font-medium text-slate-400 group-hover:text-white transition-colors flex items-center gap-1">
-                      Chi tiết <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                  {/* Top Content: Category Badge & Icon */}
+                  <div className="relative z-10 p-5 flex items-start justify-between gap-2">
+                    <span className={`text-[10px] sm:text-[11px] font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-xl border backdrop-blur-md shadow-sm ${tech.badgeStyle}`}>
+                      {tech.category}
                     </span>
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs border shadow-lg backdrop-blur-md ${tech.iconStyle}`}>
+                      <TechIcon className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* Bottom Content: Titles, Descriptions, Feature Badges & Action */}
+                  <div className="relative z-10 p-5 sm:p-6 flex flex-col justify-end cinematic-dark-overlay">
+                    <div className="text-[10px] sm:text-[11px] font-semibold text-amber-400/90 uppercase tracking-wider mb-1">
+                      {tech.tagline}
+                    </div>
+                    <h4 className="text-xl sm:text-2xl font-black text-white mb-2 group-hover:text-amber-300 transition-colors flex items-center gap-2">
+                      {tech.title}
+                    </h4>
+                    <p className="text-xs text-slate-300/90 leading-relaxed mb-3.5 line-clamp-3">
+                      {tech.description}
+                    </p>
+
+                    {/* Feature Badges */}
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {tech.features.map((feat, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-black/45 text-slate-200 border border-white/10 backdrop-blur-md shadow-sm"
+                        >
+                          {feat}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
+                      <button
+                        type="button"
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${tech.btnGradient}`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Khám phá</span>
+                      </button>
+                      <span className="text-[11px] font-medium text-slate-400 group-hover:text-white transition-colors flex items-center gap-1">
+                        Chi tiết <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Cinematic Technology Detail Modal */}
-      {selectedTech && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: 99999,
-            background: 'rgba(0, 0, 0, 0.82)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedTech(null);
-          }}
-        >
-          <div
-            className="relative w-full max-w-[700px] max-h-[88vh] flex flex-col overflow-hidden rounded-2xl bg-[#12151f] border border-white/10 shadow-2xl animate-scale-up"
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '700px',
-              maxHeight: '88vh',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              borderRadius: '16px',
-              background: '#12151f',
-              border: '1px solid rgba(255,255,255,0.12)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header Banner */}
-            <div className="relative h-48 sm:h-56 overflow-hidden shrink-0">
-              <img
-                src={selectedTech.image}
-                alt={selectedTech.title}
-                onError={(e) => {
-                  e.target.src = selectedTech.fallbackImage;
-                }}
-                className="w-full h-full object-cover filter brightness-[0.65]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#12151f] via-[#12151f]/60 to-transparent" />
+      {/* TRẢI NGHIỆM CÔNG NGHỆ PHÒNG CHIẾU - DETAIL MODAL */}
+      <ModalPortal
+        isOpen={Boolean(selectedTech)}
+        onClose={() => setSelectedTech(null)}
+        title={
+          selectedTech && (
+            <span className="flex items-center gap-2 text-white">
+              <Sparkles className="w-5 h-5 text-ruby-500" />
+              {selectedTech.title}
+            </span>
+          )
+        }
+        subtitle={selectedTech?.category}
+        maxWidth="max-w-[760px]"
+        noPadding={true}
+      >
+        {selectedTech && (() => {
+          // Resolve supported rooms dynamically from database rooms state
+          let supportedRoomsList = [];
+          if (selectedTech.id === 'imax') {
+            supportedRoomsList = rooms.filter(
+              (r) => r.room_type === 'imax' || (r.name && r.name.toLowerCase().includes('imax'))
+            );
+          } else if (selectedTech.id === 'dolby') {
+            supportedRoomsList = rooms.filter(
+              (r) =>
+                (r.name && r.name.toLowerCase().includes('dolby')) ||
+                (r.description && r.description.toLowerCase().includes('dolby'))
+            );
+          } else if (selectedTech.id === '3d') {
+            supportedRoomsList = rooms.filter(
+              (r) => r.status === 'active' && r.room_type !== 'imax'
+            ).slice(0, 4);
+          } else if (selectedTech.id === '2d') {
+            supportedRoomsList = rooms.filter((r) => r.status === 'active');
+          }
 
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedTech(null)}
-                className="absolute top-4 right-4 z-50 w-9 h-9 rounded-full bg-black/75 hover:bg-ruby-600 text-white backdrop-blur-md transition-all flex items-center justify-center border border-white/20 shadow-lg cursor-pointer hover:scale-105 active:scale-95"
-                title="Đóng (phím ESC)"
-                aria-label="Đóng"
-              >
-                <X className="w-5 h-5" />
-              </button>
+          // Fallback if rooms not loaded yet
+          if (supportedRoomsList.length === 0) {
+            supportedRoomsList = [
+              { name: selectedTech.defaultRoom, location: 'Khu vực phòng chiếu chính' },
+            ];
+          }
 
-              <div className="absolute bottom-4 left-6 right-16">
-                <span className={`text-[11px] font-extrabold tracking-wider uppercase px-3 py-1 rounded-lg border backdrop-blur-md ${selectedTech.badgeStyle}`}>
-                  {selectedTech.category}
-                </span>
-                <h3 className="text-2xl sm:text-3xl font-black text-white mt-2">
-                  {selectedTech.title}
-                </h3>
-                <p className="text-xs text-amber-300 font-medium">
-                  {selectedTech.tagline}
-                </p>
-              </div>
-            </div>
+          // Matching movies for this tech
+          let matchingMovies = [];
+          if (selectedTech.id === 'imax') {
+            matchingMovies = movies.filter((m) => (m.format || '').toUpperCase().includes('IMAX'));
+          } else if (selectedTech.id === '3d') {
+            matchingMovies = movies.filter((m) => (m.format || '').toUpperCase().includes('3D'));
+          } else if (selectedTech.id === '2d') {
+            matchingMovies = movies.filter(
+              (m) => (m.format || '').toUpperCase().includes('2D') || !m.format
+            ).slice(0, 4);
+          } else if (selectedTech.id === 'dolby') {
+            matchingMovies = movies.filter((m) =>
+              (m.format || '').toUpperCase().includes('DOLBY') ||
+              ['dune', 'oppenheimer', 'godzilla', 'furiosa'].some((k) =>
+                (m.name || '').toLowerCase().includes(k)
+              )
+            ).slice(0, 4);
+          }
 
-            {/* Modal Body */}
-            <div
-              className="modal-body flex-1 overflow-y-auto p-6 sm:p-7 space-y-6"
-              style={{
-                overflowY: 'auto',
-                flex: 1,
-                padding: '24px',
-              }}
-            >
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {selectedTech.description}
-              </p>
+          return (
+            <div className="flex flex-col">
+              {/* Modal Header Banner */}
+              <div className="relative h-44 sm:h-52 overflow-hidden shrink-0">
+                <img
+                  src={selectedTech.image}
+                  alt={selectedTech.title}
+                  onError={(e) => {
+                    e.target.src = selectedTech.fallbackImage;
+                  }}
+                  className="w-full h-full object-cover filter brightness-[0.6] contrast-[1.1]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#12151f] via-[#12151f]/60 to-transparent" />
 
-              {/* Technical Specs Grid */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                  <Maximize2 className="w-3.5 h-3.5 text-ruby-400" />
-                  Thông Số Kỹ Thuật Đạt Chuẩn Quốc Tế
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {selectedTech.specs.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-2xl bg-cinema-800/80 border border-cinema-700/60 flex flex-col justify-center"
-                    >
-                      <span className="text-[11px] text-slate-400 font-medium">{item.label}</span>
-                      <span className="text-xs font-bold text-white mt-0.5">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Application Room at Night Movie */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-cinema-800 via-cinema-850 to-cinema-800 border border-cinema-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <span className="text-[11px] text-slate-400 font-medium">Phòng chiếu trang bị tại Night Movie:</span>
-                  <div className="text-sm font-extrabold text-white flex items-center gap-2 mt-0.5">
-                    <Tv className="w-4 h-4 text-amber-400" />
-                    {selectedTech.roomName}
+                <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between gap-3">
+                  <div>
+                    <span className={`text-[10px] sm:text-[11px] font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-lg border backdrop-blur-md ${selectedTech.badgeStyle}`}>
+                      {selectedTech.category}
+                    </span>
+                    <h3 className="text-2xl sm:text-3xl font-black text-white mt-1.5">
+                      {selectedTech.title}
+                    </h3>
+                    <p className="text-xs text-amber-300 font-medium">
+                      {selectedTech.tagline}
+                    </p>
+                  </div>
+                  <div className={`hidden sm:flex px-3 py-1.5 rounded-xl border text-xs font-black uppercase backdrop-blur-md ${selectedTech.badgeStyle}`}>
+                    {selectedTech.shortCode}
                   </div>
                 </div>
+              </div>
+
+              {/* Scrollable Body */}
+              <div className="p-6 sm:p-7 space-y-6 max-h-[60vh] overflow-y-auto">
+                {/* Description */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-ruby-400" />
+                    Tổng Quan Công Nghệ
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    {selectedTech.description}
+                  </p>
+                </div>
+
+                {/* Technical Specs */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+                    <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
+                    Thông Số Kỹ Thuật Đạt Chuẩn Quốc Tế
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedTech.specs.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3.5 rounded-xl bg-cinema-850/80 border border-cinema-700/60 flex flex-col justify-center"
+                      >
+                        <span className="text-[11px] text-slate-400 font-medium">{item.label}</span>
+                        <span className="text-xs font-bold text-white mt-0.5">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Real Verified Rooms at NIGHT MOVIE */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+                    <Tv className="w-3.5 h-3.5 text-cyan-400" />
+                    Phòng Chiếu Trang Bị Tại NIGHT MOVIE ({supportedRoomsList.length} phòng)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {supportedRoomsList.map((rm, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl bg-cinema-900 border border-cinema-700/70 flex items-center gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-ruby-600/20 border border-ruby-500/40 text-ruby-400 flex items-center justify-center shrink-0">
+                          <Tv className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-white truncate">{rm.name}</div>
+                          <div className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
+                            <MapPin className="w-3 h-3 text-slate-500" />
+                            {rm.location || 'Khu vực phòng chiếu'}
+                            {rm.capacity ? ` • ${rm.capacity} ghế` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Audio Experience Demo Button */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-cinema-900 to-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                      <Volume2 className="w-4 h-4 text-amber-400" />
+                      Trải Nghiệm Âm Thanh Rạp Mở Màn
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Nghe thử hiệu ứng âm trường siêu trầm (Sub-Bass Boom & Treble Swell)
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => cinemaSound.playCinemaIntroBoom()}
+                    className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-amber-400" />
+                    <span>Nghe Thử Âm Thanh</span>
+                  </button>
+                </div>
+
+                {/* Movies Currently Available in this Format */}
+                {matchingMovies.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+                      <Film className="w-3.5 h-3.5 text-ruby-400" />
+                      Phim Đang Chiếu Có Định Dạng {selectedTech.shortName}
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {matchingMovies.slice(0, 4).map((m) => (
+                        <div
+                          key={m.id}
+                          className="p-2.5 rounded-xl bg-cinema-850/90 border border-cinema-700/60 flex items-center gap-3 group"
+                        >
+                          <img
+                            src={m.poster}
+                            alt={m.name}
+                            className="w-12 h-16 object-cover rounded-lg shrink-0"
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=800';
+                            }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-ruby-600/30 text-ruby-300 font-bold">
+                              {m.age_rating || 'T16'}
+                            </span>
+                            <h5 className="text-xs font-bold text-white truncate mt-1">{m.name}</h5>
+                            <span className="text-[10px] text-slate-400 block truncate">
+                              {m.format || '2D Digital'}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTech(null);
+                              onSelectMovie(m);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-ruby-600 hover:bg-ruby-500 text-white text-[11px] font-bold shrink-0 transition-colors cursor-pointer"
+                          >
+                            Đặt Vé
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 sm:p-5 border-t border-white/10 bg-[#12151f] flex items-center justify-between gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedTech(null);
                     if (onNavigate) onNavigate('schedules');
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-ruby-600 to-rose-600 hover:from-ruby-500 hover:to-rose-500 text-white shadow-glow-red flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-ruby-600 to-rose-600 hover:from-ruby-500 hover:to-rose-500 text-white text-xs font-bold shadow-glow-red flex items-center gap-1.5 cursor-pointer transition-all"
                 >
                   <Ticket className="w-3.5 h-3.5" />
-                  <span>Xem Lịch Chiếu</span>
+                  <span>Xem Lịch Chiếu Các Phòng</span>
                 </button>
-              </div>
-
-              {/* Modal Footer Actions */}
-              <div className="pt-2 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setSelectedTech(null)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-cinema-800 hover:bg-cinema-700 text-slate-200 border border-cinema-700 transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Đóng
                 </button>
               </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          );
+        })()}
+      </ModalPortal>
 
       {/* Trailer Modal */}
       <TrailerModal
