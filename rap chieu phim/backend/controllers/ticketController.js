@@ -125,16 +125,16 @@ async function getTicketById(req, res, next) {
     }
 
     const ticket = tickets[0];
-
     // STT 10: Chống lỗ hổng IDOR - Customer chỉ được xem vé của chính mình
     if (req.user?.role === 'customer') {
       const currentCustomerId = req.user.customerId || req.user.id;
-      if (Number(ticket.customer_id) !== Number(currentCustomerId)) {
+      if (Number(ticket.customer_id) !== Number(currentCustomerId) && Number(ticket.customer_id) !== Number(req.user.id)) {
         return res.status(403).json({
           success: false,
           message: 'Bạn không có quyền truy cập vào thông tin vé xem phim này.',
         });
       }
+    }
     }
 
     return res.status(200).json({ success: true, data: ticket });
@@ -255,7 +255,7 @@ async function cancelTicket(req, res, next) {
   try {
     const { id } = req.params;
     const userRole = req.user.role;
-    const customerId = req.user.customerId;
+    const customerId = req.user.customerId || req.user.id;
 
     const tickets = await db.query(
       `SELECT t.*, s.start_time, b.id AS booking_id
@@ -274,7 +274,7 @@ async function cancelTicket(req, res, next) {
 
     // Nếu là customer, kiểm tra quyền sở hữu và thời gian hủy
     if (userRole === 'customer') {
-      if (ticket.customer_id !== customerId) {
+      if (ticket.customer_id !== customerId && ticket.customer_id !== req.user.id) {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền hủy vé này.' });
       }
 

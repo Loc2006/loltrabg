@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const { validateAndCalculateVoucher } = require('../config/vouchers');
+const { badRequest, forbidden, notFound } = require('../utils/httpError');
 
 // Bộ nhớ tạm lưu phiên giao dịch MoMo Sandbox để đối chiếu IPN & Return URL
 const pendingMomoOrders = new Map();
@@ -60,7 +61,7 @@ async function finalizeBookingTransaction({
     );
 
     if (!bookings || bookings.length === 0) {
-      throw new Error('Đơn đặt vé không tồn tại hoặc đã hết hạn.');
+      throw notFound('Đơn đặt vé không tồn tại hoặc đã hết hạn.');
     }
 
     const booking = bookings[0];
@@ -72,7 +73,7 @@ async function finalizeBookingTransaction({
       booking.customer_id !== customerId &&
       booking.customer_id !== user.id
     ) {
-      throw new Error('Bạn không có quyền thanh toán đơn đặt vé này.');
+      throw forbidden('Bạn không có quyền thanh toán đơn đặt vé này.');
     }
 
     // Idempotent: Nếu đơn đã được thanh toán (ví dụ do IPN đã xử lý trước khi Return URL gọi về)
@@ -105,7 +106,7 @@ async function finalizeBookingTransaction({
     }
 
     if (booking.status === 'cancelled' || booking.status === 'expired') {
-      throw new Error('Đơn đặt vé này đã bị hủy hoặc hết hạn thời gian giữ 10 phút. Vui lòng chọn ghế lại.');
+      throw badRequest('Đơn đặt vé này đã bị hủy hoặc hết hạn thời gian giữ 10 phút. Vui lòng chọn ghế lại.');
     }
 
     // 2. STT 20: Kiểm tra các ghế đang giữ của đơn đặt này KÈM điều kiện hold_expire > NOW()

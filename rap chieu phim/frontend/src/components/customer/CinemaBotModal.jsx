@@ -468,12 +468,12 @@ export function CinemaBotModal({
                     {m.movieData && (
                       <div className="mt-3 p-2.5 rounded-xl bg-cinema-950/80 border border-cinema-750 flex items-center gap-3">
                         <img
-                          src={m.movieData.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=400'}
-                          alt={m.movieData.title}
+                          src={m.movieData.poster || m.movieData.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=400'}
+                          alt={m.movieData.name || m.movieData.title}
                           className="w-12 h-16 object-cover rounded-lg shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="font-black text-white truncate">{m.movieData.title}</div>
+                          <div className="font-black text-white truncate">{m.movieData.name || m.movieData.title}</div>
                           <div className="text-[10px] text-amber-400 font-bold mt-0.5">
                             ⭐ {m.movieData.rating || '9.5'} • {m.movieData.age_rating || 'T16'}
                           </div>
@@ -506,7 +506,7 @@ export function CinemaBotModal({
                                   : '18:30'}
                               </div>
                               <div className="text-[10px] text-slate-400 truncate">
-                                {sch.room_name || 'Hall 1'} • {sch.screening_format || '2D'}
+                                {sch.room_name || 'Hall 1'} • {sch.format || sch.screening_format || '2D'}
                               </div>
                             </button>
                           ))}
@@ -524,7 +524,7 @@ export function CinemaBotModal({
                             className="p-2 rounded-xl bg-cinema-950/80 border border-cinema-750 hover:border-ruby-500 flex items-center justify-between cursor-pointer group transition-all"
                           >
                             <div className="truncate">
-                              <span className="font-bold text-white group-hover:text-ruby-400">{mov.title}</span>
+                              <span className="font-bold text-white group-hover:text-ruby-400">{mov.name || mov.title}</span>
                               <span className="text-[10px] text-slate-400 ml-2">({mov.genre || 'Hành động'})</span>
                             </div>
                             <span className="text-[10px] font-bold text-ruby-400 shrink-0">Đặt vé →</span>

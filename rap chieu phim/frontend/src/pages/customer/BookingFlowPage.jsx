@@ -15,7 +15,7 @@ export function BookingFlowPage({
   onOpenAuth,
   initialIssuedTickets = null,
 }) {
-  const { setSelectedSchedule, proceedToHoldSeats, cancelHold, activeBooking, isHolding, resetBookingState } = useBooking();
+  const { setSelectedSchedule, selectedSeats, proceedToHoldSeats, cancelHold, activeBooking, isHolding, resetBookingState } = useBooking();
   const { isAuthenticated } = useAuth();
 
   const [scheduleData, setScheduleData] = useState(null);
@@ -263,7 +263,7 @@ export function BookingFlowPage({
         isOpen={isConcessionOpen}
         onClose={() => handleConcessionProceed([])}
         onProceed={handleConcessionProceed}
-        selectedSeatsCount={scheduleData?.seats?.length || 1}
+        selectedSeatsCount={selectedSeats?.length || activeBooking?.seats?.length || 1}
       />
 
       <PaymentModal

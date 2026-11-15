@@ -45,10 +45,11 @@ export function SchedulesManager() {
 
   const handleOpenCreate = () => {
     setEditingSchedule(null);
-    const pad = (n) => String(n).padStart(2, '0');
     const defaultStart = new Date();
     defaultStart.setHours(defaultStart.getHours() + 2, 0, 0, 0);
-    const startStr = `${defaultStart.getFullYear()}-${pad(defaultStart.getMonth() + 1)}-${pad(defaultStart.getDate())}T${pad(defaultStart.getHours())}:${pad(defaultStart.getMinutes())}`;
+    const startStr = new Date(defaultStart.getTime() - defaultStart.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
 
     setFormData({
       movie_id: movies[0]?.id || '',

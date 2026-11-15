@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { validateAllSeatsGap } = require('../utils/seatGapValidator');
+const { badRequest, notFound, conflict } = require('../utils/httpError');
 
 const SEAT_HOLD_MINUTES = parseInt(process.env.SEAT_HOLD_MINUTES || '10', 10);
 
@@ -16,6 +17,21 @@ async function holdSeats(req, res, next) {
       return res.status(400).json({
         success: false,
         message: 'Vui lòng chọn ít nhất một ghế để giữ.',
+      });
+    }
+
+    const uniqueSeatIds = [
+      ...new Set(
+        seat_ids
+          .map((id) => parseInt(id, 10))
+          .filter((id) => Number.isInteger(id) && id > 0)
+      ),
+    ];
+
+    if (uniqueSeatIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Danh sách ghế được chọn không hợp lệ.',
       });
     }
 
@@ -56,28 +72,28 @@ async function holdSeats(req, res, next) {
              OR (bs.status = 'holding' AND bs.hold_expire > NOW())
            )
          FOR UPDATE`,
-        [screening_id, seat_ids]
+        [screening_id, uniqueSeatIds]
       );
 
       if (conflicts.length > 0) {
         const conflictSeats = conflicts.map((c) => `${c.row_number}${c.seat_number}`).join(', ');
-        throw new Error(`Ghế ${conflictSeats} vừa được người khác giữ hoặc đã bán. Vui lòng chọn ghế khác!`);
+        throw conflict(`Ghế ${conflictSeats} vừa được người khác giữ hoặc đã bán. Vui lòng chọn ghế khác!`);
       }
 
       // Lấy thông tin giá từng loại ghế
       const [seatsInfo] = await conn.query(
         `SELECT id, room_id, \`row_number\`, seat_number, seat_type, status FROM seats WHERE id IN (?)`,
-        [seat_ids]
+        [uniqueSeatIds]
       );
 
-      if (!seatsInfo || seatsInfo.length !== seat_ids.length) {
-        throw new Error('Một số ghế được chọn không tồn tại trong hệ thống.');
+      if (!seatsInfo || seatsInfo.length !== uniqueSeatIds.length) {
+        throw badRequest('Một số ghế được chọn không tồn tại trong hệ thống.');
       }
 
       // RÀNG BUỘC: Không cho đặt ghế đang bảo trì hoặc ngừng hoạt động
       const brokenSeats = seatsInfo.filter((s) => s.status === 'broken' || s.status === 'inactive');
       if (brokenSeats.length > 0) {
-        throw new Error('Một số ghế được chọn đang bảo trì hoặc tạm ngừng phục vụ.');
+        throw badRequest('Một số ghế được chọn đang bảo trì hoặc tạm ngừng phục vụ.');
       }
 
       // Xác thực nghiêm ngặt: Tất cả ghế phải thuộc chính xác phòng chiếu của suất chiếu này
@@ -85,7 +101,7 @@ async function holdSeats(req, res, next) {
         (s) => s.room_id && s.room_id !== schedule.room_id
       );
       if (invalidRoomSeats.length > 0) {
-        throw new Error('Một số ghế được chọn không thuộc phòng chiếu của suất này.');
+        throw badRequest('Một số ghế được chọn không thuộc phòng chiếu của suất này.');
       }
 
       // RÀNG BUỘC NGHIỆP VỤ: KHÔNG ĐỂ LẠI GHẾ TRỐNG ĐƠN LẺ (SINGLE SEAT GAP RULE)
@@ -113,9 +129,9 @@ async function holdSeats(req, res, next) {
         return activeUnavailableSet.has(Number(s.id));
       };
 
-      const gapCheck = validateAllSeatsGap(allRoomSeats, seat_ids, isSeatUnavailableBefore);
+      const gapCheck = validateAllSeatsGap(allRoomSeats, uniqueSeatIds, isSeatUnavailableBefore);
       if (!gapCheck.isValid) {
-        throw new Error(gapCheck.message || 'Không thể chọn ghế này vì sẽ để lại một chỗ trống đơn lẻ. Vui lòng chọn vị trí khác.');
+        throw badRequest(gapCheck.message || 'Không thể chọn ghế này vì sẽ để lại một chỗ trống đơn lẻ. Vui lòng chọn vị trí khác.');
       }
 
       let totalAmount = 0;
@@ -189,22 +205,10 @@ async function holdSeats(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      message: `Đã giữ tạm thời ${seat_ids.length} ghế trong ${SEAT_HOLD_MINUTES} phút. Vui lòng thanh toán trước khi hết hạn!`,
+      message: `Đã giữ tạm thời ${uniqueSeatIds.length} ghế trong ${SEAT_HOLD_MINUTES} phút. Vui lòng thanh toán trước khi hết hạn!`,
       data: bookingResult,
     });
   } catch (error) {
-    if (error.message.includes('vừa được người khác giữ')) {
-      return res.status(409).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    if (error.message.includes('chỗ trống đơn lẻ') || error.message.includes('ghế trống đơn lẻ')) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
     next(error);
   }
 }
@@ -217,6 +221,13 @@ async function releaseSeatHold(req, res, next) {
     const { booking_id } = req.body;
     const customerId = req.user.customerId || req.user.id;
 
+    if (!booking_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp mã đơn đặt vé (booking_id).',
+      });
+    }
+
     await db.withTransaction(async (conn) => {
       const [bookings] = await conn.query(
         `SELECT id, status FROM bookings WHERE id = ? AND customer_id = ? FOR UPDATE`,
@@ -224,7 +235,7 @@ async function releaseSeatHold(req, res, next) {
       );
 
       if (!bookings || bookings.length === 0) {
-        throw new Error('Không tìm thấy đơn đặt hoặc bạn không có quyền hủy đơn này.');
+        throw notFound('Không tìm thấy đơn đặt hoặc bạn không có quyền hủy đơn này.');
       }
 
       const booking = bookings[0];
@@ -270,16 +281,17 @@ async function getBookingById(req, res, next) {
     }
 
     const booking = bookings[0];
-
-    // STT 10: Chống lỗ hổng IDOR - Customer chỉ được xem đơn đặt vé của chính mình
-    if (req.user?.role === 'customer') {
-      const currentCustomerId = req.user.customerId || req.user.id;
-      if (Number(booking.customer_id) !== Number(currentCustomerId)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Bạn không có quyền truy cập vào thông tin đơn đặt vé này.',
-        });
-      }
+    const customerId = req.user.customerId || req.user.id;
+    if (
+      req.user.role === 'customer' &&
+      booking.customer_id &&
+      Number(booking.customer_id) !== Number(customerId) &&
+      Number(booking.customer_id) !== Number(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền truy cập vào thông tin đơn đặt vé này.',
+      });
     }
 
     // Lấy danh sách ghế

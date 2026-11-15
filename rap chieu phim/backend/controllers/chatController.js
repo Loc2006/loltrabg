@@ -24,13 +24,13 @@ async function handleChat(req, res) {
     let schedules = [];
     try {
       movies = await db.query(
-        "SELECT id, name, genre, duration, format, rating, release_date FROM movies WHERE status = 'now_showing' LIMIT 8"
+        "SELECT id, name, genre, duration, format, age_rating, release_date FROM movies WHERE status = 'now_showing' LIMIT 8"
       );
       schedules = await db.query(
-        `SELECT s.id, s.start_time, s.price, s.format, m.name AS movie_name, r.name AS room_name 
-         FROM schedules s 
+        `SELECT s.id, s.start_time, s.ticket_price AS price, s.format, m.name AS movie_name, r.name AS room_name 
+         FROM screening_schedules s 
          JOIN movies m ON s.movie_id = m.id 
-         JOIN rooms r ON s.room_id = r.id 
+         JOIN cinema_rooms r ON s.room_id = r.id 
          WHERE s.status = 'scheduled' 
          ORDER BY s.start_time ASC LIMIT 6`
       );
@@ -144,7 +144,7 @@ function generateCinemaResponse(q, movies = [], schedules = []) {
   if (q.includes('lịch') || q.includes('suất') || q.includes('hôm nay') || q.includes('tối nay') || q.includes('giờ')) {
     let schedText = '';
     if (schedules && schedules.length > 0) {
-      schedText = schedules.slice(0, 4).map(s => `• **${s.movie_name}**: ${s.start_time?.slice(11, 16) || '19:30'} - ${s.room_name} (${Number(s.price).toLocaleString('vi-VN')}đ)`).join('\n');
+      schedText = schedules.slice(0, 4).map(s => `• **${s.movie_name}**: ${s.start_time?.slice(11, 16) || '19:30'} - ${s.room_name} (${Number(s.price || s.ticket_price || 90000).toLocaleString('vi-VN')}đ)`).join('\n');
     } else {
       schedText = '• **Dune 2**: 18:30 (Phòng IMAX Laser)\n• **Oppenheimer**: 19:45 (Phòng Dolby Atmos)\n• **Mai**: 20:15 (Phòng Gold Class)';
     }

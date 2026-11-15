@@ -189,6 +189,12 @@ async function createSchedule(req, res, next) {
     const movie = movies[0];
 
     const startDateTime = new Date(start_time);
+    if (isNaN(startDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thời gian bắt đầu không hợp lệ.',
+      });
+    }
     const endDateTime = new Date(startDateTime.getTime() + (movie.duration + 15) * 60000);
     // Định dạng theo giờ địa phương (tránh lệch múi giờ khi dùng toISOString/UTC)
     const pad = (n) => String(n).padStart(2, '0');
@@ -287,6 +293,14 @@ async function cancelSchedule(req, res, next) {
   try {
     const { id } = req.params;
 
+    const existing = await db.query(`SELECT id FROM screening_schedules WHERE id = ?`, [id]);
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lịch chiếu cần hủy.',
+      });
+    }
+
     // Kiểm tra vé đã bán chưa
     const bookedSeats = await db.query(
       `SELECT COUNT(*) AS count FROM booking_seats bs
@@ -339,6 +353,12 @@ async function updateSchedule(req, res, next) {
     const movie = movies[0];
 
     const startDateTime = new Date(targetStartTime);
+    if (isNaN(startDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thời gian bắt đầu không hợp lệ.',
+      });
+    }
     const endDateTime = new Date(startDateTime.getTime() + (movie.duration + 20) * 60000);
     const pad = (n) => String(n).padStart(2, '0');
     const endTimeStr = `${endDateTime.getFullYear()}-${pad(endDateTime.getMonth() + 1)}-${pad(endDateTime.getDate())} ` +

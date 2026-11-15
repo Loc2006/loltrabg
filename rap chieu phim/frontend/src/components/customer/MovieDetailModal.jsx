@@ -121,8 +121,13 @@ export function MovieDetailModal({ isOpen, onClose, movie, onSelectSchedule }) {
         comment: newComment.trim(),
       });
       if (res && res.success && res.data) {
-        setReviews((prev) => [res.data, ...prev]);
-        setTotalReviews((prev) => prev + 1);
+        setReviews((prev) => {
+          const updated = [res.data, ...prev];
+          const avg = updated.reduce((sum, item) => sum + Number(item.rating || 0), 0) / updated.length;
+          setAverageRating(Number(avg.toFixed(1)));
+          setTotalReviews(updated.length);
+          return updated;
+        });
         setNewComment('');
         setReviewMsg('Đã đăng nhận xét thành công!');
         setTimeout(() => setReviewMsg(''), 3000);

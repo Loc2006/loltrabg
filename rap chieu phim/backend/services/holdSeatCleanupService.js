@@ -8,8 +8,6 @@ function startHoldSeatCleanupService(intervalMs = 15000) {
 
   const cleanup = async () => {
     try {
-      if (!db.getIsConnected()) return;
-
       await db.withTransaction(async (conn) => {
         // 1. Tìm các booking_seats đã hết hạn giữ (hold_expire < NOW() AND status = 'holding')
         const [expiredSeats] = await conn.query(
@@ -17,7 +15,7 @@ function startHoldSeatCleanupService(intervalMs = 15000) {
            WHERE status = 'holding' AND hold_expire < NOW() FOR UPDATE`
         );
 
-        if (expiredSeats.length > 0) {
+        if (expiredSeats && expiredSeats.length > 0) {
           const bookingIds = [...new Set(expiredSeats.map((s) => s.booking_id))];
           const seatIds = expiredSeats.map((s) => s.id);
 
@@ -37,7 +35,6 @@ function startHoldSeatCleanupService(intervalMs = 15000) {
         }
       });
     } catch (err) {
-      // Bỏ qua log nếu DB tạm thời chưa kết nối
       if (db.getIsConnected()) {
         console.error('[HoldSeat Service Error]', err.message);
       }

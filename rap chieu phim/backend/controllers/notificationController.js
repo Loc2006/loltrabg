@@ -38,7 +38,13 @@ async function markNotificationAsRead(req, res, next) {
     if (id === 'all') {
       await db.query(`UPDATE notifications SET is_read = TRUE WHERE user_id = ?`, [userId]);
     } else {
-      await db.query(`UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?`, [id, userId]);
+      const result = await db.query(`UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?`, [id, userId]);
+      if (result && result.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy thông báo.',
+        });
+      }
     }
 
     return res.status(200).json({
