@@ -148,4 +148,3 @@ export function ModalPortal({
   return createPortal(overlayContent, document.body);
 }
 export default ModalPortal;
-
