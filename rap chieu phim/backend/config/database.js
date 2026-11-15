@@ -1014,7 +1014,18 @@ async function query(sql, params = []) {
   // 16. NOTIFICATIONS & OTHER MODULES
   // =========================================================================
   if (normalized.includes('from notifications')) {
-    return memory.notifications;
+    let list = [...(memory.notifications || [])];
+    if (normalized.includes('where user_id = ?')) {
+      const userId = parseInt(params[0], 10);
+      list = list.filter((n) => n.user_id === userId);
+    }
+    list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    if (normalized.includes('limit')) {
+      const limitMatch = normalized.match(/limit\s+(\d+)/);
+      const limit = limitMatch ? parseInt(limitMatch[1], 10) : 30;
+      list = list.slice(0, limit);
+    }
+    return list;
   }
   if (normalized.includes('from concession_items')) {
     if (normalized.includes('where id in (?)')) {
@@ -1968,6 +1979,25 @@ async function query(sql, params = []) {
 
   // O. Notifications Mutations
   if (normalized.startsWith('insert into notifications')) {
+    if (normalized.includes('select u.id')) {
+      const title = params[0];
+      const msg = params[1];
+      const targetUsers = (memory.users || []).filter((u) => [1, 2].includes(u.role_id));
+      let lastId = memory.notifications.length > 0 ? Math.max(...memory.notifications.map((n) => n.id)) : 0;
+      targetUsers.forEach((u) => {
+        lastId++;
+        memory.notifications.unshift({
+          id: lastId,
+          user_id: u.id,
+          title,
+          message: msg,
+          type: 'incident',
+          is_read: false,
+          created_at: now.toISOString().replace('T', ' ').slice(0, 19),
+        });
+      });
+      return { insertId: lastId, affectedRows: targetUsers.length };
+    }
     const newId = memory.notifications.length > 0 ? Math.max(...memory.notifications.map((n) => n.id)) + 1 : 1;
     const newNotif = {
       id: newId,
@@ -1983,8 +2013,29 @@ async function query(sql, params = []) {
   }
 
   if (normalized.startsWith('update notifications')) {
-    const id = parseInt(params[0], 10);
-    const notif = memory.notifications.find((n) => n.id === id);
+    if (normalized.includes('where id = ? and user_id = ?')) {
+      const notifId = parseInt(params[0], 10);
+      const userId = parseInt(params[1], 10);
+      const notif = (memory.notifications || []).find((n) => n.id === notifId && n.user_id === userId);
+      if (notif) {
+        notif.is_read = true;
+        return { affectedRows: 1 };
+      }
+      return { affectedRows: 0 };
+    }
+    if (normalized.includes('where user_id = ?')) {
+      const userId = parseInt(params[0], 10);
+      let count = 0;
+      (memory.notifications || []).forEach((n) => {
+        if (n.user_id === userId && !n.is_read) {
+          n.is_read = true;
+          count++;
+        }
+      });
+      return { affectedRows: count };
+    }
+    const notifId = parseInt(params[0], 10);
+    const notif = (memory.notifications || []).find((n) => n.id === notifId);
     if (notif) notif.is_read = true;
     return { affectedRows: notif ? 1 : 0 };
   }

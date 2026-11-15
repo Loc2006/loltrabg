@@ -1171,10 +1171,10 @@ INSERT IGNORE INTO `inspection_details` (`id`, `inspection_id`, `item_name`, `st
 
 -- 18. Notifications (Thông báo mẫu)
 INSERT IGNORE INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `is_read`, `created_at`) VALUES
-(1, 2, 'Sự cố mới tại Phòng 8', 'Nhân viên Đỗ Tuấn Kiệt vừa báo cáo sự cố điều hòa phòng 8 (Mức độ: Cao). Vui lòng phân công kỹ thuật viên.', 'incident', 0, '2026-09-14 09:30:00'),
-(2, 5, 'Phân công xử lý sự cố', 'Quản lý Mark Zuckerberg đã phân công bạn xử lý sự cố INC-20260914-001 (Điều hòa Phòng 8).', 'incident', 0, '2026-09-14 09:40:00'),
-(3, 2, 'Cảnh báo hạn bảo trì', 'Hệ thống máy chiếu IMAX Laser Phòng 4 sắp đến kỳ bảo dưỡng chất lỏng (20/09/2026).', 'maintenance', 0, '2026-09-14 08:00:00'),
-(4, 7, 'Đặt vé thành công', 'Bạn đã đặt thành công 2 vé xem phim Lật Mặt 7: Một Điều Ước (Ghế D5, D6) suất 18:00 hôm nay.', 'booking', 1, '2026-09-14 10:18:25');
+(1, 2, 'Sự cố mới tại Phòng 8', 'Nhân viên Đỗ Tuấn Kiệt vừa báo cáo sự cố điều hòa phòng 8 (Mức độ: Cao). Vui lòng phân công kỹ thuật viên.', 'incident', 0, '2026-11-15 09:30:00'),
+(2, 5, 'Phân công xử lý sự cố', 'Quản lý Mark Zuckerberg đã phân công bạn xử lý sự cố INC-20260914-001 (Điều hòa Phòng 8).', 'incident', 0, '2026-11-15 09:40:00'),
+(3, 2, 'Cảnh báo hạn bảo trì', 'Hệ thống máy chiếu IMAX Laser Phòng 4 sắp đến kỳ bảo dưỡng chất lỏng (20/09/2026).', 'maintenance', 0, '2026-11-15 08:00:00'),
+(4, 7, 'Đặt vé thành công', 'Bạn đã đặt thành công 2 vé xem phim Lật Mặt 7: Một Điều Ước (Ghế D5, D6) suất 18:00 hôm nay.', 'booking', 1, '2026-11-15 10:18:25');
 
 -- --------------------------------------------------------------------
 -- 19. BẢNG concession_items (Menu Bắp Nước F&B)

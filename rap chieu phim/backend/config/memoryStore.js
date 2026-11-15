@@ -471,9 +471,10 @@ const inspection_details = [
 ];
 
 const notifications = [
-  { id: 1, user_id: 2, title: 'Sự cố mới tại Phòng 8', message: 'Nhân viên Đỗ Tuấn Kiệt vừa báo cáo sự cố điều hòa phòng 8. Vui lòng phân công kỹ thuật viên.', type: 'incident', is_read: false, created_at: `${todayStr} 09:30:00` },
+  { id: 1, user_id: 2, title: 'Sự cố mới tại Phòng 8', message: 'Nhân viên Đỗ Tuấn Kiệt vừa báo cáo sự cố điều hòa phòng 8 (Mức độ: Cao). Vui lòng phân công kỹ thuật viên.', type: 'incident', is_read: false, created_at: `${todayStr} 09:30:00` },
   { id: 2, user_id: 5, title: 'Phân công xử lý sự cố', message: 'Quản lý Mark Zuckerberg đã phân công bạn xử lý sự cố INC-20260914-001 (Điều hòa Phòng 8).', type: 'incident', is_read: false, created_at: `${todayStr} 09:40:00` },
-  { id: 3, user_id: 7, title: 'Đặt vé thành công', message: 'Bạn đã đặt thành công 2 vé xem phim Lật Mặt 7 suất 18:30 hôm nay.', type: 'booking', is_read: true, created_at: `${todayStr} 10:18:25` },
+  { id: 3, user_id: 2, title: 'Cảnh báo hạn bảo trì', message: 'Hệ thống máy chiếu IMAX Laser Phòng 4 sắp đến kỳ bảo dưỡng chất lỏng (20/09/2026).', type: 'maintenance', is_read: false, created_at: `${todayStr} 08:00:00` },
+  { id: 4, user_id: 7, title: 'Đặt vé thành công', message: 'Bạn đã đặt thành công 2 vé xem phim Lật Mặt 7: Một Điều Ước (Ghế D5, D6) suất 18:00 hôm nay.', type: 'booking', is_read: true, created_at: `${todayStr} 10:18:25` },
 ];
 
 // --- 17. F&B Concession Menu Items ---

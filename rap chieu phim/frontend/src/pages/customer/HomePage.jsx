@@ -12,7 +12,6 @@ import {
   ChevronRight,
   Ticket,
   Video,
-  Volume2,
   Sparkles,
   Maximize2,
   Wind,
@@ -366,15 +365,6 @@ export function HomePage({
                       >
                         <Play className="w-4 h-4 text-ruby-400 fill-ruby-400 shrink-0" />
                         Trailer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => cinemaSound.playCinemaIntroBoom()}
-                        className="px-4 py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs sm:text-sm border border-amber-500/40 backdrop-blur-md transition-all flex items-center gap-2 shrink-0"
-                        title="Nghe hiệu ứng âm thanh mở màn chuẩn rạp"
-                      >
-                        <Volume2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        Âm Thanh IMAX
                       </button>
                     </div>
                   </div>
