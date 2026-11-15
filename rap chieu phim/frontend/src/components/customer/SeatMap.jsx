@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useBooking } from '../../context/BookingContext';
 import { useAuth } from '../../context/AuthContext';
 import { validateAllSeatsGap } from '../../utils/seatGapValidator';
@@ -11,12 +11,17 @@ import {
   ArrowDown,
   Sparkles,
   AlertTriangle,
+  Heart,
+  User,
+  Users,
+  Volume2,
 } from 'lucide-react';
 import { Virtual3DSeatViewModal } from './Virtual3DSeatViewModal';
 
 export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
   const {
     selectedSeats,
+    setSelectedSeats,
     toggleSeatSelection,
     activeBooking,
     formattedHoldTime,
@@ -27,6 +32,7 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
 
   const [previewSeat, setPreviewSeat] = useState(null);
   const [gapError, setGapError] = useState('');
+  const [moodMode, setMoodMode] = useState('all'); // 'all' | 'couple' | 'solo' | 'sweetspot' | 'group'
 
   const seats = scheduleData?.seats || [];
   const schedule = scheduleData?.schedule;
@@ -40,8 +46,11 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
     rows[seat.row_number].push(seat);
   });
 
-  // Ensure row keys are sorted A -> F
+  // Ensure row keys are sorted A -> F and seats in each row sorted by seat_number
   const rowKeys = Object.keys(rows).sort();
+  rowKeys.forEach((rk) => {
+    rows[rk].sort((a, b) => Number(a.seat_number) - Number(b.seat_number));
+  });
 
   // Total price of selected seats
   const totalPrice = selectedSeats.reduce((sum, s) => sum + s.price, 0);
@@ -50,6 +59,205 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
   const calculatedPeopleCount =
     totalPeople ||
     selectedSeats.reduce((sum, s) => sum + (s.seat_type === 'couple' ? 2 : 1), 0);
+
+  // =========================================================================
+  // THUẬT TOÁN GỢI Ý GHẾ THEO TÂM TRẠNG (SOCIAL SEAT MATCHING / MOOD MODE)
+  // =========================================================================
+  const moodRecommendation = useMemo(() => {
+    if (moodMode === 'all' || seats.length === 0) {
+      return { highlightedIds: new Set(), bestAutoPick: [], info: null };
+    }
+
+    const isUnavailableBefore = (s) => s.state !== 'available';
+    const isValidSelection = (candidateSeats) => {
+      if (!candidateSeats || candidateSeats.length === 0) return false;
+      if (candidateSeats.some((s) => s.state !== 'available')) return false;
+      const res = validateAllSeatsGap(
+        seats,
+        candidateSeats.map((s) => s.id),
+        isUnavailableBefore
+      );
+      return res.isValid;
+    };
+
+    const highlightedIds = new Set();
+    let bestAutoPick = [];
+
+    if (moodMode === 'couple') {
+      // 1. Ưu tiên ghế đôi Couple hàng F (từ trung tâm F6, F7 ra 2 bên)
+      const fRow = rows['F'] || [];
+      const availableCoupleSeats = fRow.filter((s) => s.state === 'available');
+      availableCoupleSeats.forEach((s) => highlightedIds.add(s.id));
+
+      // 2. Các cặp 2 ghế góc riêng tư ở hàng E, D, C (cột 1-2 hoặc 11-12)
+      const cornerPairs = [];
+      ['E', 'D', 'C'].forEach((rk) => {
+        const rSeats = rows[rk] || [];
+        const leftPair = rSeats.filter((s) => Number(s.seat_number) === 1 || Number(s.seat_number) === 2);
+        const rightPair = rSeats.filter((s) => Number(s.seat_number) === 11 || Number(s.seat_number) === 12);
+        if (leftPair.length === 2 && isValidSelection(leftPair)) {
+          leftPair.forEach((s) => highlightedIds.add(s.id));
+          cornerPairs.push(leftPair);
+        }
+        if (rightPair.length === 2 && isValidSelection(rightPair)) {
+          rightPair.forEach((s) => highlightedIds.add(s.id));
+          cornerPairs.push(rightPair);
+        }
+      });
+
+      // Chọn tự động tốt nhất cho cặp đôi: Ghế Couple F gần trung tâm (6.5) nhất
+      if (availableCoupleSeats.length > 0) {
+        const sortedF = [...availableCoupleSeats].sort(
+          (a, b) => Math.abs(Number(a.seat_number) - 6.5) - Math.abs(Number(b.seat_number) - 6.5)
+        );
+        bestAutoPick = [sortedF[0]];
+      } else if (cornerPairs.length > 0) {
+        bestAutoPick = cornerPairs[0];
+      }
+
+      return {
+        highlightedIds,
+        bestAutoPick,
+        info: {
+          title: '❤️ Chế Độ Hẹn Hò Riêng Tư (Couple & Romance)',
+          desc: 'Tập trung vào hàng ghế đôi Sofa Couple (F1–F12) không vách ngăn và các cặp ghế góc kín đáo, ấm cúng nhất cho 2 người.',
+          ringClass: 'ring-2 ring-pink-400 shadow-[0_0_14px_rgba(244,114,182,0.75)] scale-105 z-10',
+          dotClass: 'bg-pink-400',
+          bannerClass: 'from-pink-950/90 via-cinema-900 to-rose-950/90 border-pink-500/60 text-pink-200',
+          btnClass: 'from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 shadow-[0_0_15px_rgba(236,72,153,0.4)]',
+        },
+      };
+    }
+
+    if (moodMode === 'solo') {
+      // Dành cho người đi xem 1 mình: Tìm ghế đơn ở hàng D, E, C, B sát lối đi (1, 12) hoặc có 2 ghế kề bên đang trống (không bị ngồi sát người lạ)
+      const soloCandidates = [];
+      ['D', 'E', 'C', 'B'].forEach((rk) => {
+        const rSeats = rows[rk] || [];
+        rSeats.forEach((seat, idx) => {
+          if (seat.state !== 'available') return;
+          if (!isValidSelection([seat])) return;
+
+          const leftNeighbor = idx > 0 ? rSeats[idx - 1] : null;
+          const rightNeighbor = idx < rSeats.length - 1 ? rSeats[idx + 1] : null;
+
+          const isLeftEmpty = !leftNeighbor || leftNeighbor.state === 'available';
+          const isRightEmpty = !rightNeighbor || rightNeighbor.state === 'available';
+          const isAisle = Number(seat.seat_number) === 1 || Number(seat.seat_number) === 12;
+
+          // Ghế yên tĩnh: cả 2 bên chưa có ai đặt, ưu tiên sát lối đi dễ di chuyển
+          if (isLeftEmpty && isRightEmpty) {
+            highlightedIds.add(seat.id);
+            soloCandidates.push({
+              seat,
+              score: (isAisle ? 20 : 10) + (rk === 'D' || rk === 'E' ? 5 : 0),
+            });
+          }
+        });
+      });
+
+      soloCandidates.sort((a, b) => b.score - a.score);
+      if (soloCandidates.length > 0) {
+        bestAutoPick = [soloCandidates[0].seat];
+      }
+
+      return {
+        highlightedIds,
+        bestAutoPick,
+        info: {
+          title: '🕶️ Chế Độ Đi Xem Một Mình (Solo Yên Tĩnh)',
+          desc: 'Tự động lọc các vị trí sát lối đi dễ ra vào và cách xa các cụm ghế đông người/cặp đôi đã đặt trước, đảm bảo không gian thoải mái tuyệt đối.',
+          ringClass: 'ring-2 ring-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.75)] scale-105 z-10',
+          dotClass: 'bg-cyan-400',
+          bannerClass: 'from-cyan-950/90 via-cinema-900 to-teal-950/90 border-cyan-500/60 text-cyan-200',
+          btnClass: 'from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 shadow-[0_0_15px_rgba(6,182,212,0.4)]',
+        },
+      };
+    }
+
+    if (moodMode === 'sweetspot') {
+      // Điểm ngọt âm thanh & hình ảnh: Hàng D, E, ghế số 4 -> 9
+      const sweetCandidates = [];
+      ['D', 'E'].forEach((rk) => {
+        const rSeats = rows[rk] || [];
+        rSeats.forEach((seat) => {
+          const num = Number(seat.seat_number);
+          if (num >= 4 && num <= 9 && seat.state === 'available' && isValidSelection([seat])) {
+            highlightedIds.add(seat.id);
+            sweetCandidates.push(seat);
+          }
+        });
+      });
+
+      sweetCandidates.sort(
+        (a, b) => Math.abs(Number(a.seat_number) - 6.5) - Math.abs(Number(b.seat_number) - 6.5)
+      );
+
+      // Ưu tiên chọn cặp 2 ghế trung tâm nếu hợp lệ, hoặc 1 ghế trung tâm nhất
+      if (sweetCandidates.length > 0) {
+        bestAutoPick = [sweetCandidates[0]];
+      }
+
+      return {
+        highlightedIds,
+        bestAutoPick,
+        info: {
+          title: '🔊 Chế Độ Đỉnh Cao Điện Ảnh (Sweet Spot Dolby Atmos)',
+          desc: 'Khoanh vùng trung tâm vàng (Hàng D & E, ghế 4–9) nơi hội tụ âm trường vòm 360° Dolby Atmos và góc nhìn màn hình chuẩn 35° không mỏi cổ.',
+          ringClass: 'ring-2 ring-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.85)] scale-105 z-10',
+          dotClass: 'bg-amber-400',
+          bannerClass: 'from-amber-950/90 via-cinema-900 to-yellow-950/90 border-amber-500/60 text-amber-200',
+          btnClass: 'from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-cinema-950 shadow-glow-amber',
+        },
+      };
+    }
+
+    if (moodMode === 'group') {
+      // Tìm cụm 3 - 4 ghế trống liền kề trên cùng 1 hàng (ưu tiên D, E, C, B)
+      const blocks = [];
+      ['D', 'E', 'C', 'B', 'A'].forEach((rk) => {
+        const rSeats = rows[rk] || [];
+        for (let i = 0; i <= rSeats.length - 4; i++) {
+          const slice4 = rSeats.slice(i, i + 4);
+          if (slice4.every((s) => s.state === 'available') && isValidSelection(slice4)) {
+            slice4.forEach((s) => highlightedIds.add(s.id));
+            const centerDist = Math.abs(Number(slice4[1].seat_number) + 0.5 - 6.5);
+            blocks.push({ seats: slice4, score: (rk === 'D' || rk === 'E' ? 20 : 10) - centerDist });
+          }
+        }
+      });
+
+      blocks.sort((a, b) => b.score - a.score);
+      if (blocks.length > 0) {
+        bestAutoPick = blocks[0].seats;
+      }
+
+      return {
+        highlightedIds,
+        bestAutoPick,
+        info: {
+          title: '🍿 Chế Độ Nhóm Bạn Chung Vui (3–4 Ghế Liền Kề)',
+          desc: 'Tự động tìm các dãy 4 ghế trống liền mạch ở vị trí trung tâm để cả hội bạn hoặc gia đình ngồi cạnh nhau trò chuyện và chia sẻ bắp nước.',
+          ringClass: 'ring-2 ring-purple-400 shadow-[0_0_14px_rgba(192,132,252,0.75)] scale-105 z-10',
+          dotClass: 'bg-purple-400',
+          bannerClass: 'from-purple-950/90 via-cinema-900 to-indigo-950/90 border-purple-500/60 text-purple-200',
+          btnClass: 'from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-[0_0_15px_rgba(147,51,234,0.4)]',
+        },
+      };
+    }
+
+    return { highlightedIds: new Set(), bestAutoPick: [], info: null };
+  }, [moodMode, seats]);
+
+  const handleAutoPickMood = () => {
+    if (isHolding) return;
+    if (!moodRecommendation.bestAutoPick || moodRecommendation.bestAutoPick.length === 0) {
+      setGapError('Hiện không còn cụm ghế trống phù hợp với chế độ này trong suất chiếu.');
+      return;
+    }
+    setGapError('');
+    setSelectedSeats(moodRecommendation.bestAutoPick);
+  };
 
   // Xử lý chọn/bỏ chọn ghế có kiểm tra quy tắc không để lại ghế trống đơn lẻ
   const handleSeatClick = (seat) => {
@@ -103,6 +311,14 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
     onProceedToPayment();
   };
 
+  const moodButtons = [
+    { id: 'all', label: 'Tất Cả Ghế', icon: Sparkles, activeClass: 'bg-cinema-800 text-white border-slate-400' },
+    { id: 'couple', label: '❤️ Ghế Hẹn Hò', icon: Heart, activeClass: 'bg-pink-950/90 text-pink-300 border-pink-500 shadow-[0_0_12px_rgba(236,72,153,0.35)]' },
+    { id: 'solo', label: '🕶️ Xem Một Mình', icon: User, activeClass: 'bg-cyan-950/90 text-cyan-300 border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.35)]' },
+    { id: 'sweetspot', label: '🔊 Đỉnh Cao Atmos', icon: Volume2, activeClass: 'bg-amber-950/90 text-amber-300 border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.35)]' },
+    { id: 'group', label: '🍿 Nhóm Bạn (4 Ghế)', icon: Users, activeClass: 'bg-purple-950/90 text-purple-300 border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.35)]' },
+  ];
+
   return (
     <div className="w-full flex flex-col items-center">
       {/* 10-Minute Hold Active Banner */}
@@ -141,6 +357,70 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
           </div>
         </div>
       )}
+
+      {/* BỘ LỌC TÂM TRẠNG THÔNG MINH (AI MOOD SEAT MATCHING) */}
+      <div className="w-full max-w-4xl mb-6 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-2xl bg-cinema-900/80 border border-cinema-700/70">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>Gợi ý chỗ ngồi theo tâm trạng:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {moodButtons.map((btn) => {
+              const isActive = moodMode === btn.id;
+              return (
+                <button
+                  key={btn.id}
+                  type="button"
+                  onClick={() => {
+                    setMoodMode(btn.id);
+                    setGapError('');
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
+                    isActive
+                      ? btn.activeClass
+                      : 'bg-cinema-950/70 text-slate-400 border-cinema-800 hover:text-white hover:border-cinema-600'
+                  }`}
+                >
+                  <span>{btn.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Banner chi tiết chế độ Mood đang bật & Nút chọn nhanh 1 chạm */}
+        {moodMode !== 'all' && moodRecommendation.info && (
+          <div
+            className={`p-4 rounded-2xl bg-gradient-to-r border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in ${moodRecommendation.info.bannerClass}`}
+          >
+            <div className="space-y-1">
+              <div className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
+                <span>{moodRecommendation.info.title}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/40 border border-white/15 font-mono">
+                  {moodRecommendation.highlightedIds.size} vị trí phù hợp
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs opacity-90 leading-relaxed max-w-2xl">
+                {moodRecommendation.info.desc}
+              </p>
+            </div>
+
+            {!isHolding && moodRecommendation.bestAutoPick.length > 0 && (
+              <button
+                type="button"
+                onClick={handleAutoPickMood}
+                className={`px-4 py-2.5 rounded-xl bg-gradient-to-r font-extrabold text-xs text-white shrink-0 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 ${moodRecommendation.info.btnClass}`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>
+                  Chọn Nhanh ({moodRecommendation.bestAutoPick.map((s) => `${s.row_number}${s.seat_number}`).join(', ')})
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Thông báo vi phạm quy tắc ghế trống đơn lẻ */}
       {gapError && (
@@ -220,6 +500,7 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
                       const isBooked = seat.state === 'booked';
                       const isBroken = seat.state === 'unavailable';
                       const isCouple = seat.seat_type === 'couple' || isCoupleRow;
+                      const isMoodHighlighted = moodMode !== 'all' && moodRecommendation.highlightedIds.has(seat.id);
 
                       // Base visual styling
                       let seatStyle =
@@ -244,7 +525,7 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
                         statusTitle = `Ghế ${seat.row_number}${seat.seat_number} (🔵 ĐANG ĐƯỢC GIỮ 10 PHÚT)`;
                       } else if (isSelected) {
                         seatStyle =
-                          'bg-gradient-to-t from-orange-600 via-amber-500 to-amber-400 text-cinema-950 font-black border-white shadow-glow-amber scale-105 ring-2 ring-amber-400';
+                          'bg-gradient-to-t from-orange-600 via-amber-500 to-amber-400 text-cinema-950 font-black border-white shadow-glow-amber scale-105 ring-2 ring-amber-400 z-20';
                         statusTitle = `Ghế ${seat.row_number}${seat.seat_number} (🟡 Đang chọn) - ${Number(seat.price).toLocaleString('vi-VN')}đ`;
                       } else if (seat.seat_type === 'vip') {
                         seatStyle =
@@ -254,6 +535,16 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
                         seatStyle =
                           'bg-pink-950/70 text-pink-300 border-pink-500/70 hover:bg-pink-900/80 hover:border-pink-400 hover:text-pink-200 shadow-[0_0_10px_rgba(236,72,153,0.15)]';
                         statusTitle = `Ghế Đôi ${seat.row_number}${seat.seat_number} (💖 Ghế Couple - 2 người ngồi) - ${Number(seat.price).toLocaleString('vi-VN')}đ`;
+                      }
+
+                      // Apply Mood Mode Highlighting or Dimming
+                      let moodExtraClass = '';
+                      if (moodMode !== 'all' && !isSelected) {
+                        if (isMoodHighlighted && moodRecommendation.info) {
+                          moodExtraClass = moodRecommendation.info.ringClass;
+                        } else {
+                          moodExtraClass = 'opacity-30 hover:opacity-80';
+                        }
                       }
 
                       // Width & design: Couple seats have double-cushion width
@@ -267,8 +558,13 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
                           disabled={isBooked || isHoldingByOther || isBroken}
                           onClick={() => handleSeatClick(seat)}
                           title={statusTitle}
-                          className={`h-8 sm:h-8.5 ${seatWidth} rounded-lg border text-xs font-semibold flex items-center justify-center transition-all duration-150 relative ${seatStyle} ${cursor}`}
+                          className={`h-8 sm:h-8.5 ${seatWidth} rounded-lg border text-xs font-semibold flex items-center justify-center transition-all duration-200 relative ${seatStyle} ${cursor} ${moodExtraClass}`}
                         >
+                          {isMoodHighlighted && !isSelected && moodRecommendation.info && (
+                            <span
+                              className={`absolute -top-1 -right-1 w-2 h-2 rounded-full animate-ping ${moodRecommendation.info.dotClass}`}
+                            />
+                          )}
                           {isSelected ? (
                             <div className="flex items-center justify-center gap-1 font-black">
                               <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -428,7 +724,7 @@ export function SeatMap({ scheduleData, onProceedToPayment, onCancelHold }) {
           <div className="flex flex-wrap gap-1.5 items-center">
             {selectedSeats.length === 0 ? (
               <span className="text-xs text-slate-500 italic">
-                Chưa chọn ghế nào. Vui lòng bấm vào sơ đồ để chọn chỗ ngồi.
+                Chưa chọn ghế nào. Vui lòng bấm vào sơ đồ hoặc dùng bộ lọc tâm trạng để chọn nhanh.
               </span>
             ) : (
               selectedSeats.map((s) => {
