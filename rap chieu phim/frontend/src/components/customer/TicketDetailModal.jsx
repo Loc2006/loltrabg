@@ -136,8 +136,9 @@ export function TicketDetailModal({ ticket, isOpen, onClose, onCancelTicket }) {
       // 5. Suất Chiếu & Ngày
       ctx.fillStyle = '#cbd5e1';
       ctx.font = '14px Arial, sans-serif';
+      const safeTimeStr = typeof ticket.start_time === 'string' ? ticket.start_time.replace(' ', 'T') : ticket.start_time;
       ctx.fillText(
-        `Suất Chiếu: ${ticket.start_time ? new Date(ticket.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '18:30'}  |  Ngày: ${ticket.start_time ? new Date(ticket.start_time).toLocaleDateString('vi-VN') : '14/11/2026'}`,
+        `Suất Chiếu: ${ticket.start_time ? new Date(safeTimeStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '18:30'}  |  Ngày: ${ticket.start_time ? new Date(safeTimeStr).toLocaleDateString('vi-VN') : '14/11/2026'}`,
         canvas.width / 2,
         290
       );
@@ -357,14 +358,14 @@ export function TicketDetailModal({ ticket, isOpen, onClose, onCancelTicket }) {
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gold-400" />
                 <span>
-                  {ticket.start_time ? new Date(ticket.start_time).toLocaleDateString('vi-VN') : '14/11/2026'}
+                  {ticket.start_time ? new Date(typeof ticket.start_time === 'string' ? ticket.start_time.replace(' ', 'T') : ticket.start_time).toLocaleDateString('vi-VN') : '14/11/2026'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-gold-400" />
                 <span className="font-bold text-white">
                   {ticket.start_time
-                    ? new Date(ticket.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                    ? new Date(typeof ticket.start_time === 'string' ? ticket.start_time.replace(' ', 'T') : ticket.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
                     : '18:30'}
                 </span>
               </div>
