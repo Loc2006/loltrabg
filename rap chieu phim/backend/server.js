@@ -18,6 +18,7 @@ if (process.env.NODE_ENV !== 'production') {
   process.env.MOMO_SECRET_KEY = process.env.MOMO_SECRET_KEY || 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
   process.env.ENABLE_DEMO_TOOLS = 'true';
   process.env.ENABLE_IN_MEMORY_DEMO = 'true';
+  process.env.ENABLE_MOCK_PAYMENT = process.env.ENABLE_MOCK_PAYMENT || 'true';
 }
 
 // STT 09: Kiểm tra các biến môi trường thiết yếu khi khởi động, không dùng fallback bí mật viết cứng

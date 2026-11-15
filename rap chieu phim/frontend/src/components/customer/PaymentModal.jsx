@@ -224,7 +224,7 @@ export function PaymentModal({
         resultCode: resultCode,
         transId: String(Math.floor(2000000000 + Math.random() * 900000000)),
         message: resultCode === 0 ? 'Successful.' : 'Transaction denied by user.',
-        signature: momoSession?.signature || 'sandbox_sig',
+        voucher_code: appliedVoucher?.code || undefined,
       });
 
       if (res.success && res.data?.paymentStatus === 'success') {
@@ -745,6 +745,14 @@ export function PaymentModal({
             </div>
           </div>
         </div>
+
+        {/* Error Alert near footer */}
+        {errorMsg && (
+          <div className="mx-6 mb-2 p-2.5 rounded-xl bg-rose-950/90 border border-rose-500/60 text-rose-200 text-xs font-semibold flex items-center gap-2 shrink-0">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
         {/* Footer Actions */}
         <div className="p-4 bg-cinema-950/90 border-t border-cinema-800 flex items-center justify-between gap-3 shrink-0">

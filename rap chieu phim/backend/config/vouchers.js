@@ -31,6 +31,30 @@ const VALID_VOUCHERS = {
     minTotalAmount: 0,
     desc: 'Thành viên VIP giảm 10%',
   },
+  SPIN20K: {
+    code: 'SPIN20K',
+    discountAmount: 20000,
+    minTotalAmount: 0,
+    desc: 'Giảm 20.000đ từ Vòng quay may mắn',
+  },
+  SPIN10K: {
+    code: 'SPIN10K',
+    discountAmount: 10000,
+    minTotalAmount: 0,
+    desc: 'Giảm 10.000đ từ Vòng quay may mắn',
+  },
+  SPIN50K: {
+    code: 'SPIN50K',
+    discountAmount: 50000,
+    minTotalAmount: 0,
+    desc: 'Giảm 50.000đ từ Vòng quay may mắn',
+  },
+  LUCKY20: {
+    code: 'LUCKY20',
+    discountAmount: 20000,
+    minTotalAmount: 0,
+    desc: 'Giảm 20.000đ ưu đãi may mắn',
+  },
 };
 
 /**

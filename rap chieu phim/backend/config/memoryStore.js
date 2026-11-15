@@ -334,7 +334,7 @@ const todayStr = localDateStr(new Date());
 const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
 const tomorrowStr = localDateStr(tomorrowDate);
 const schedules = [
-  { id: 1, movie_id: 1, room_id: 4, start_time: `${todayStr} 14:00:00`, end_time: `${todayStr} 16:50:00`, format: 'IMAX 2D Phụ đề', ticket_price: 150000, status: 'screening' },
+  { id: 1, movie_id: 1, room_id: 4, start_time: `${todayStr} 23:30:00`, end_time: `${tomorrowStr} 02:20:00`, format: 'IMAX 2D Phụ đề', ticket_price: 150000, status: 'scheduled' },
   { id: 2, movie_id: 1, room_id: 4, start_time: `${tomorrowStr} 18:00:00`, end_time: `${tomorrowStr} 20:50:00`, format: 'IMAX 2D Phụ đề', ticket_price: 160000, status: 'scheduled' },
   { id: 3, movie_id: 5, room_id: 5, start_time: `${todayStr} 19:00:00`, end_time: `${todayStr} 21:10:00`, format: '4DX 3D Phụ đề', ticket_price: 180000, status: 'scheduled' },
   { id: 4, movie_id: 4, room_id: 1, start_time: `${todayStr} 15:00:00`, end_time: `${todayStr} 17:20:00`, format: '2D Tiếng Việt', ticket_price: 90000, status: 'screening' },

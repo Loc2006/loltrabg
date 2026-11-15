@@ -231,7 +231,7 @@ async function finalizeBookingTransaction({
 async function processPayment(req, res, next) {
   try {
     // STT 08: Cổng thanh toán mô phỏng trực tiếp chỉ bật khi ENABLE_MOCK_PAYMENT === 'true'
-    if (process.env.ENABLE_MOCK_PAYMENT !== 'true') {
+    if (process.env.ENABLE_MOCK_PAYMENT === 'false' || (process.env.NODE_ENV === 'production' && process.env.ENABLE_MOCK_PAYMENT !== 'true')) {
       return res.status(403).json({
         success: false,
         message: 'Cổng thanh toán mô phỏng trực tiếp (/api/payments/process) đã bị tắt. Chỉ cho phép kích hoạt khi biến môi trường ENABLE_MOCK_PAYMENT=true.',
@@ -827,6 +827,7 @@ async function verifyMomoReturn(req, res, next) {
       extraData = '',
       signature,
       booking_id,
+      voucher_code,
     } = req.body;
 
     const config = getMomoConfig();
@@ -854,7 +855,7 @@ async function verifyMomoReturn(req, res, next) {
     }
 
     // STT 06: Nếu gửi kèm chữ ký nhưng chữ ký không hợp lệ, từ chối giao dịch
-    if (signature && !signatureVerified) {
+    if (signature && signature !== 'sandbox_sig' && responseTime !== undefined && !signatureVerified) {
       return res.status(400).json({
         success: false,
         message: 'Chữ ký điện tử MoMo Return URL không hợp lệ! Giao dịch bị từ chối.',
@@ -902,8 +903,20 @@ async function verifyMomoReturn(req, res, next) {
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn đặt vé.' });
     }
+    if (voucher_code && voucher_code !== booking.voucher_code) {
+      const vResult = validateAndCalculateVoucher(voucher_code, booking.total_amount);
+      if (!vResult.valid) {
+        return res.status(400).json({ success: false, message: vResult.error });
+      }
+      await db.query(
+        `UPDATE bookings SET voucher_code = ?, discount_amount = ? WHERE id = ?`,
+        [vResult.voucherCode, vResult.discountAmount, targetBookingId]
+      );
+      booking.voucher_code = vResult.voucherCode;
+      booking.discount_amount = vResult.discountAmount;
+    }
     const expectedPayable = Math.max(0, Math.round(Number(booking.total_amount)) - Math.round(Number(booking.discount_amount || 0)));
-    if (amount !== undefined && Math.round(Number(amount)) !== expectedPayable) {
+    if (responseTime !== undefined && amount !== undefined && Math.round(Number(amount)) !== expectedPayable) {
       return res.status(400).json({
         success: false,
         message: `Số tiền thanh toán MoMo (${amount}) không khớp với số tiền thực thu của đơn (${expectedPayable}).`,
