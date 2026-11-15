@@ -41,6 +41,11 @@ async function testConnection() {
     return true;
   } catch (error) {
     console.warn(`[MySQL Notice] Chưa thể kết nối MySQL trực tiếp (${error.message}).`);
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_IN_MEMORY_DEMO !== 'true') {
+      console.error(`[CRITICAL DATABASE ERROR] Môi trường Production bắt buộc phải kết nối cơ sở dữ liệu MySQL thật.`);
+      console.error(`Hệ thống từ chối khởi động và không được phép âm thầm chuyển sang bộ nhớ RAM In-Memory trong Production.`);
+      throw new Error(`Production Database Connection Failed: Không thể kết nối tới MySQL host ${dbConfig.host}:${dbConfig.port} (${error.message}).`);
+    }
     console.warn(`[MySQL Auto-Fallback] Đã kích hoạt bộ nhớ đệm In-Memory Seed Data để Web App hoạt động ngay lập tức!`);
     console.warn(`[MySQL Guide] Bạn có thể mở MySQL Workbench và import 'cinema_management.sql' bất kỳ lúc nào.`);
     isConnected = false;

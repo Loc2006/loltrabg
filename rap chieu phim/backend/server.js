@@ -17,6 +17,14 @@ if (missingVars.length > 0) {
   process.exit(1);
 }
 
+// BẢO VỆ PRODUCTION: Chặn JWT_SECRET mặc định yếu trong production
+if (process.env.NODE_ENV === 'production') {
+  if (process.env.JWT_SECRET === 'cinema_secret_key_demo_2026_super_secure' || process.env.JWT_SECRET.length < 32) {
+    console.error('[CRITICAL SECURITY ERROR] JWT_SECRET trong Production không được sử dụng khóa demo mặc định và phải dài tối thiểu 32 ký tự.');
+    process.exit(1);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -96,8 +104,13 @@ app.use(errorHandler);
 
 // Khởi động server standalone (nếu không phải môi trường serverless Vercel)
 async function startServer() {
-  // Kiểm tra kết nối MySQL
-  await db.testConnection();
+  try {
+    // Kiểm tra kết nối MySQL (bắt buộc kết nối thật khi NODE_ENV=production)
+    await db.testConnection();
+  } catch (err) {
+    console.error(`[FATAL STARTUP ERROR] ${err.message}`);
+    process.exit(1);
+  }
 
   // Khởi chạy worker dọn dẹp ghế giữ quá 10 phút
   startHoldSeatCleanupService(15000);
