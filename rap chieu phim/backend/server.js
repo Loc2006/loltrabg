@@ -1,3 +1,4 @@
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -7,6 +8,17 @@ const { startHoldSeatCleanupService } = require('./services/holdSeatCleanupServi
 
 // Tải biến môi trường
 dotenv.config();
+
+// Hỗ trợ cấu hình mặc định an toàn cho môi trường development / demo
+if (process.env.NODE_ENV !== 'production') {
+  process.env.PORT = process.env.PORT || '5050';
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'cinema_ooad_secret_jwt_key_2026_super_secure';
+  process.env.MOMO_PARTNER_CODE = process.env.MOMO_PARTNER_CODE || 'MOMO';
+  process.env.MOMO_ACCESS_KEY = process.env.MOMO_ACCESS_KEY || 'F8BBA842ECF85';
+  process.env.MOMO_SECRET_KEY = process.env.MOMO_SECRET_KEY || 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
+  process.env.ENABLE_DEMO_TOOLS = 'true';
+  process.env.ENABLE_IN_MEMORY_DEMO = 'true';
+}
 
 // STT 09: Kiểm tra các biến môi trường thiết yếu khi khởi động, không dùng fallback bí mật viết cứng
 const REQUIRED_ENV_VARS = ['JWT_SECRET', 'MOMO_PARTNER_CODE', 'MOMO_ACCESS_KEY', 'MOMO_SECRET_KEY'];
@@ -68,7 +80,8 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'online',
     message: 'Cinema Management Backend REST API is running!',
-    database: db.getIsConnected() ? 'connected' : 'disconnected (Check MySQL server)',
+    database: db.getIsConnected() ? 'connected (MySQL Server)' : 'active (In-Memory Database Ready)',
+    frontend_url: 'http://localhost:5173',
     timestamp: new Date(),
   });
 });
@@ -97,6 +110,17 @@ app.use('/api/kdm', require('./routes/kdmRoutes'));
 app.use('/api/turnaround', require('./routes/turnaroundRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/vouchers', require('./routes/voucherRoutes'));
+
+// Phục vụ trực tiếp giao diện Frontend tại cổng 5050
+const path = require('path');
+const distPath = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 // Error Handlers
 app.use(notFoundHandler);
