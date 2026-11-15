@@ -49,7 +49,7 @@ export function IncidentsManager() {
         api.getIncidents(),
         api.getRooms(),
         api.getEquipment(),
-        api.getTechnicians(),
+        api.getTechnicians().catch(() => ({ success: true, data: [] })),
       ]);
 
       if (incRes.success) setIncidents(incRes.data);

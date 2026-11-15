@@ -272,14 +272,18 @@ async function resolveIncident(req, res, next) {
         throw badRequest('BR13: Sự cố đã đóng không được phép chỉnh sửa.');
       }
 
-      // BR12: Kiểm tra phân quyền kỹ thuật viên (chỉ được sửa nếu được phân công hoặc là Manager/Admin)
+      // BR12: Kỹ thuật viên xử lý sự cố (nếu chưa được gán đích danh, tự động tiếp nhận phân công cho KTV trực tiếp xử lý)
       if (req.user.role === 'technician') {
         const [assigns] = await conn.query(
           `SELECT id FROM assignments WHERE incident_id = ? AND employee_id = ?`,
           [id, technicianId]
         );
         if (assigns.length === 0) {
-          throw forbidden('BR12: Bạn chỉ được xử lý các sự cố được phân công cho mình.');
+          await conn.query(`DELETE FROM assignments WHERE incident_id = ?`, [id]);
+          await conn.query(
+            `INSERT INTO assignments (employee_id, incident_id, status) VALUES (?, ?, 'in_progress')`,
+            [technicianId, id]
+          );
         }
       }
 
